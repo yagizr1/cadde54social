@@ -1,4 +1,4 @@
-import { MoreHorizontal, Send } from 'lucide-react'
+import { MoreHorizontal, Send, Sparkles } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Link, Navigate, useNavigate } from '../lib/nav'
@@ -19,6 +19,7 @@ import { messageService } from '../services/messageService'
 import { postService } from '../services/postService'
 import { profileViewService } from '../services/profileViewService'
 import { reelsService } from '../services/reelsService'
+import { isBoosted } from '../services/boostService'
 import { settingsService } from '../services/settingsService'
 import { userService } from '../services/userService'
 import { useUiStore } from '../store/uiStore'
@@ -175,8 +176,9 @@ export function UserProfilePage() {
         ) : (
           <div className="grid w-full min-w-0 grid-cols-3 gap-px overflow-hidden bg-ink">
             {reelsService.byUser(target.id).map((r) => (
-              <Link key={r.id} to={`/reels/${r.id}`} className="min-w-0 overflow-hidden bg-ink">
+              <Link key={r.id} to={`/reels/${r.id}`} className="relative min-w-0 overflow-hidden bg-ink">
                 <video src={r.videoUrl} muted className="aspect-[9/16] w-full object-cover" />
+                {isBoosted(r) ? <Sparkles className="absolute top-1.5 right-1.5 h-3.5 w-3.5 fill-white text-white drop-shadow" /> : null}
               </Link>
             ))}
           </div>

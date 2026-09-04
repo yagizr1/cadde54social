@@ -5,7 +5,7 @@ import { premiumService } from '../services/premiumService'
 const perks = [
   'Profilini kimlerin gördüğünü gör',
   'Detaylı profil istatistikleri',
-  'Profil öne çıkarma',
+  'Gönderi öne çıkarma (24 saat)',
   'Mavi tik (onaylı hesap)',
   'Hayalet modu',
   'Tanış — kaydırarak eşleş',

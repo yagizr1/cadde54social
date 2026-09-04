@@ -3,12 +3,13 @@ import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Link, useNavigate } from '../lib/nav'
 import { Button } from '../components/ui/Button'
+import { AuthFrame } from '../components/layout/AuthFrame'
 import { useAuthStore } from '../store/authStore'
 import { useUiStore } from '../store/uiStore'
 import type { Gender } from '../types'
 
 const field =
-  'w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm outline-none focus:border-hot sm:rounded-2xl sm:px-4 sm:py-3 sm:text-base md:py-3.5'
+  'box-border w-full min-w-0 rounded-xl border border-line bg-panel px-3 py-2.5 text-sm outline-none focus:border-hot sm:rounded-2xl sm:px-4 sm:py-3 sm:text-base md:py-3.5'
 
 export function RegisterPage() {
   const register = useAuthStore((s) => s.register)
@@ -33,10 +34,8 @@ export function RegisterPage() {
   }
 
   return (
-    <div className="mx-auto grid min-h-dvh w-full max-w-[min(28rem,92vw)] place-items-center px-4 py-8 sm:px-6 sm:py-10">
-      <form
-        className="w-full anim-page"
-        onSubmit={(e) => {
+    <AuthFrame
+      onSubmit={(e) => {
           e.preventDefault()
           setError('')
           if (form.name.trim().length < 2) return setError('Ad soyad en az 2 karakter olmalı')
@@ -82,10 +81,10 @@ export function RegisterPage() {
             Geri
           </button>
         ) : null}
-        <p className="font-display text-[clamp(1.5rem,6.5vw,2.5rem)] font-extrabold leading-tight">
+        <p className="font-display text-[1.65rem] font-extrabold leading-tight sm:text-[2.25rem]">
           {adding ? 'Yeni hesap oluştur' : 'Aramıza katıl'}
         </p>
-        <p className="mt-2 text-[clamp(0.8rem,3.2vw,1.05rem)] text-mute">
+        <p className="mt-2 text-sm leading-snug text-mute sm:text-base">
           {adding ? 'Yeni hesabı bu cihaza ekle, diğer hesapların durur.' : 'Cadde54 Social hesabını oluştur, hemen içeri gir.'}
         </p>
         <div className="mt-5 space-y-2.5 sm:mt-6 sm:space-y-3">
@@ -116,7 +115,7 @@ export function RegisterPage() {
             </div>
           </div>
         </div>
-        <label className="mt-4 flex items-start gap-2.5 text-[clamp(0.75rem,3vw,0.9rem)] text-mute">
+        <label className="mt-4 flex items-start gap-2.5 text-sm text-mute">
           <input
             type="checkbox"
             checked={accepted}
@@ -135,20 +134,19 @@ export function RegisterPage() {
             okudum, kabul ediyorum.
           </span>
         </label>
-        {error ? <p className="mt-2 text-[clamp(0.75rem,3vw,0.95rem)] text-hot sm:mt-3">{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-hot sm:mt-3">{error}</p> : null}
         <Button
           className="mt-4 w-full rounded-xl py-2.5 text-sm sm:mt-5 sm:rounded-2xl sm:py-3 sm:text-base md:py-3.5"
           disabled={loading}
         >
           {loading ? 'Oluşturuluyor...' : adding ? 'Oluştur ve ekle' : 'Kayıt ol ve gir'}
         </Button>
-        <p className="mt-3 text-center text-[clamp(0.75rem,3vw,0.95rem)] text-mute sm:mt-4">
+        <p className="mt-3 text-center text-sm text-mute sm:mt-4">
           Zaten hesabın var mı?{' '}
           <Link to={adding ? '/login?add=1' : '/login'} className="text-white underline">
             Giriş yap
           </Link>
         </p>
-      </form>
-    </div>
+    </AuthFrame>
   )
 }

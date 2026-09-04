@@ -1,4 +1,4 @@
-import { ChartNoAxesColumn, ChevronDown, ChevronRight, Eye, Heart, Menu, Plus, Settings } from 'lucide-react'
+import { ChartNoAxesColumn, ChevronDown, ChevronRight, Eye, Heart, Menu, Plus, Settings, Sparkles } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from '../lib/nav'
 import { ShareSheet } from '../components/ui/ShareSheet'
@@ -15,6 +15,7 @@ import { badgeService } from '../services/badgeService'
 import { postService } from '../services/postService'
 import { presenceService } from '../services/presenceService'
 import { reelsService } from '../services/reelsService'
+import { isBoosted } from '../services/boostService'
 import { useUiStore } from '../store/uiStore'
 
 export function ProfilePage() {
@@ -140,8 +141,9 @@ export function ProfilePage() {
         {tab === 'reels' ? (
           <div className="grid w-full min-w-0 grid-cols-3 gap-px overflow-hidden bg-ink">
             {reelsService.byUser(user.id).map((r) => (
-              <Link key={r.id} to="/reels" className="aspect-[9/16] min-w-0 overflow-hidden bg-ink">
+              <Link key={r.id} to={`/reels/${r.id}`} className="relative aspect-[9/16] min-w-0 overflow-hidden bg-ink">
                 <video src={r.videoUrl} muted className="h-full w-full object-cover" />
+                {isBoosted(r) ? <Sparkles className="absolute top-1.5 right-1.5 h-3.5 w-3.5 fill-white text-white drop-shadow" /> : null}
               </Link>
             ))}
           </div>

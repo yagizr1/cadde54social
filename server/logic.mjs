@@ -19,6 +19,28 @@ function grantLifetimePremium(u) {
   u.premiumUntil = null
 }
 
+const BOOST_DURATION_MS = 24 * 60 * 60 * 1000
+
+function isPremiumActive(u) {
+  if (isLifetimePremiumUser(u)) return true
+  if (!u?.isPremium) return false
+  if (!u.premiumUntil) return true
+  return u.premiumUntil > Date.now()
+}
+
+function clearBoosts(db, userId, keep) {
+  for (const post of db.posts) {
+    if (post.userId !== userId) continue
+    if (keep?.kind === 'post' && keep.id === post.id) continue
+    if (post.boostedUntil) post.boostedUntil = null
+  }
+  for (const reel of db.reels) {
+    if (reel.userId !== userId) continue
+    if (keep?.kind === 'reel' && keep.id === reel.id) continue
+    if (reel.boostedUntil) reel.boostedUntil = null
+  }
+}
+
 function syncLifetimePremium(db) {
   for (const u of db.users) {
     if (isLifetimePremiumUser(u)) grantLifetimePremium(u)
@@ -550,6 +572,18 @@ export function runAction(meId, name, body = {}) {
       const row = post.comments.find((c) => c.id === body.commentId)
       if (row) row.hidden = false
     },
+    'posts.boost'() {
+      const post = db.posts.find((p) => p.id === body.postId)
+      if (!post || post.userId !== meId) throw new Error('Gönderi bulunamadı')
+      if (body.off) {
+        post.boostedUntil = null
+        return
+      }
+      if (!isPremiumActive(me)) throw new Error('Öne çıkarmak için Premium gerekli')
+      if (post.archived) throw new Error('Arşivdeki gönderi öne çıkarılamaz')
+      clearBoosts(db, meId, { kind: 'post', id: post.id })
+      post.boostedUntil = Date.now() + BOOST_DURATION_MS
+    },
     'stories.create'() {
       const createdAt = Date.now()
       db.stories.unshift({
@@ -618,6 +652,17 @@ export function runAction(meId, name, body = {}) {
       if (!reel || reel.userId !== meId) return
       const row = reel.comments.find((c) => c.id === body.commentId)
       if (row) row.hidden = false
+    },
+    'reels.boost'() {
+      const reel = db.reels.find((r) => r.id === body.reelId)
+      if (!reel || reel.userId !== meId) throw new Error('Reels bulunamadı')
+      if (body.off) {
+        reel.boostedUntil = null
+        return
+      }
+      if (!isPremiumActive(me)) throw new Error('Öne çıkarmak için Premium gerekli')
+      clearBoosts(db, meId, { kind: 'reel', id: reel.id })
+      reel.boostedUntil = Date.now() + BOOST_DURATION_MS
     },
     'confessions.create'() {
       db.confessions.unshift({

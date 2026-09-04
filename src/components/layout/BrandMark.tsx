@@ -4,8 +4,10 @@ import { cx } from '../../lib/utils'
 
 export function BrandLabel({ className }: { className?: string }) {
   return (
-    <span className={cx('inline-flex items-center leading-none lining-nums', className)}>
-      Cadde<span className="text-hot lining-nums">54</span>
+    <span className={cx('inline-flex max-w-full items-center leading-none lining-nums', className)}>
+      <span className="inline-flex shrink-0 items-center">
+        Cadde<span className="text-hot lining-nums">54</span>
+      </span>
       <span className="ml-[0.28em]">Social</span>
     </span>
   )

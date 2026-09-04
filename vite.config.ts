@@ -23,6 +23,7 @@ export default defineConfig({
       pwaAssets: { disabled: true },
       includeAssets: ['pwa-192.png', 'pwa-512.png'],
       devOptions: { enabled: true, type: 'module' },
+      scope: '/app/',
       manifest: {
         name: 'Cadde54 Social',
         short_name: 'Cadde54 Social',
@@ -31,8 +32,8 @@ export default defineConfig({
         background_color: '#07070B',
         display: 'standalone',
         orientation: 'portrait',
-        start_url: '/app',
-        scope: '/',
+        start_url: '/app/login',
+        scope: '/app/',
         id: '/app',
         lang: 'tr',
         prefer_related_applications: false,

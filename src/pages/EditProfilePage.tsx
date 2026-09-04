@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { useNavigate } from '../lib/nav'
+import { AvatarCropSheet } from '../components/ui/AvatarCropSheet'
 import { Button } from '../components/ui/Button'
 import { useApp } from '../hooks/useApp'
 import { MIN_AGE } from '../lib/constants'
-import { uploadImageFile } from '../lib/uploadMedia'
+import { uploadDataUrl } from '../lib/uploadMedia'
 import { userService } from '../services/userService'
 import { useUiStore } from '../store/uiStore'
 import type { Gender } from '../types'
@@ -17,24 +18,40 @@ export function EditProfilePage() {
   const [avatar, setAvatar] = useState(user?.avatar ?? '')
   const [gender, setGender] = useState<Gender>(user?.gender ?? 'unspecified')
   const [age, setAge] = useState(user?.age ? String(user.age) : '')
+  const [cropFile, setCropFile] = useState<File | null>(null)
   if (!user) return null
 
   return (
     <div className="mx-auto max-w-xl px-4 py-4 anim-page">
       <h1 className="font-display text-2xl font-bold">Profili düzenle</h1>
-      <label className="mt-6 block">
+      <label className="mt-6 block text-center">
         <img src={avatar} alt="" className="mx-auto h-24 w-24 rounded-full object-cover" />
         <input
           type="file"
           accept="image/*"
           className="mt-3 w-full text-sm"
-          onChange={async (e) => {
+          onChange={(e) => {
             const file = e.target.files?.[0]
-            if (!file) return
-            setAvatar(await uploadImageFile(file))
+            e.target.value = ''
+            if (file) setCropFile(file)
           }}
         />
+        <p className="mt-1 text-[12px] text-mute">Fotoğraf seçince kırpıp zoom’layabilirsin</p>
       </label>
+      {cropFile ? (
+        <AvatarCropSheet
+          file={cropFile}
+          onClose={() => setCropFile(null)}
+          onDone={async (dataUrl) => {
+            try {
+              setAvatar(await uploadDataUrl(dataUrl))
+              setCropFile(null)
+            } catch (err) {
+              toast(err instanceof Error ? err.message : 'Yüklenemedi', 'err')
+            }
+          }}
+        />
+      ) : null}
       <div className="mt-4 space-y-3">
         <input value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-2xl border border-line bg-panel px-4 py-3" placeholder="Ad" />
         <textarea value={bio} onChange={(e) => setBio(e.target.value)} className="min-h-28 w-full rounded-2xl border border-line bg-panel px-4 py-3" placeholder="Bio" />

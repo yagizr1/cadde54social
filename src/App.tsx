@@ -43,6 +43,7 @@ import { AdminReports } from './pages/admin/AdminReports'
 import { APP_BASE, isLegacyAppPath } from './lib/appPath'
 import { isAdminUser } from './lib/admin'
 import { getToken } from './lib/api'
+import { isStandalone } from './lib/pwaInstall'
 import { pullSnapshot } from './services/syncService'
 import { useAuthStore } from './store/authStore'
 
@@ -79,7 +80,13 @@ function LegacyOrHome() {
   if (isLegacyAppPath(pathname)) {
     return <Navigate to={`${APP_BASE}${pathname}${search}`} replace />
   }
+  if (isStandalone()) return <Navigate to={`${APP_BASE}/login`} replace />
   return <Navigate to="/" replace />
+}
+
+function MarketingPage({ children }: { children: ReactNode }) {
+  if (isStandalone()) return <Navigate to={`${APP_BASE}/login`} replace />
+  return children
 }
 
 export default function App() {
@@ -101,11 +108,46 @@ export default function App() {
     <BrowserRouter>
       <ToastHost />
       <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/sartlar" element={<LegalPage kind="terms" />} />
-        <Route path="/gizlilik" element={<LegalPage kind="privacy" />} />
-        <Route path="/terms" element={<LegalPage kind="terms" />} />
-        <Route path="/privacy" element={<LegalPage kind="privacy" />} />
+        <Route
+          path="/"
+          element={
+            <MarketingPage>
+              <LandingPage />
+            </MarketingPage>
+          }
+        />
+        <Route
+          path="/sartlar"
+          element={
+            <MarketingPage>
+              <LegalPage kind="terms" />
+            </MarketingPage>
+          }
+        />
+        <Route
+          path="/gizlilik"
+          element={
+            <MarketingPage>
+              <LegalPage kind="privacy" />
+            </MarketingPage>
+          }
+        />
+        <Route
+          path="/terms"
+          element={
+            <MarketingPage>
+              <LegalPage kind="terms" />
+            </MarketingPage>
+          }
+        />
+        <Route
+          path="/privacy"
+          element={
+            <MarketingPage>
+              <LegalPage kind="privacy" />
+            </MarketingPage>
+          }
+        />
         <Route path="/admin" element={<AdminRoute />}>
           <Route element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />

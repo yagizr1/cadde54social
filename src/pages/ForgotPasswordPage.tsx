@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Link, useNavigate } from '../lib/nav'
 import { Button } from '../components/ui/Button'
+import { AuthFrame } from '../components/layout/AuthFrame'
 import { authService } from '../services/authService'
 import { useUiStore } from '../store/uiStore'
 
 const field =
-  'w-full rounded-xl border border-line bg-panel px-3 py-2.5 text-sm outline-none focus:border-hot sm:rounded-2xl sm:px-4 sm:py-3 sm:text-base md:py-3.5'
+  'box-border w-full min-w-0 rounded-xl border border-line bg-panel px-3 py-2.5 text-sm outline-none focus:border-hot sm:rounded-2xl sm:px-4 sm:py-3 sm:text-base md:py-3.5'
 
 export function ForgotPasswordPage() {
   const toast = useUiStore((s) => s.toast)
@@ -20,10 +21,8 @@ export function ForgotPasswordPage() {
   const [loading, setLoading] = useState(false)
 
   return (
-    <div className="mx-auto grid min-h-dvh w-full max-w-[min(28rem,92vw)] place-items-center px-4 sm:px-6">
-      <form
-        className="w-full anim-page"
-        onSubmit={(e) => {
+    <AuthFrame
+      onSubmit={(e) => {
           e.preventDefault()
           setError('')
           void (async () => {
@@ -59,10 +58,10 @@ export function ForgotPasswordPage() {
           })()
         }}
       >
-        <p className="font-display text-[clamp(1.5rem,6.5vw,2.5rem)] font-extrabold leading-tight">
+        <p className="font-display text-[1.65rem] font-extrabold leading-tight sm:text-[2.25rem]">
           Şifremi unuttum
         </p>
-        <p className="mt-2 text-[clamp(0.8rem,3.2vw,1.05rem)] text-mute">
+        <p className="mt-2 text-sm leading-snug text-mute sm:text-base">
           {step === 'email'
             ? 'E-posta veya kullanıcı adını yaz, kod gönderelim.'
             : `${email} adresine kod gönderildi.`}
@@ -103,7 +102,7 @@ export function ForgotPasswordPage() {
           </div>
         )}
 
-        {error ? <p className="mt-2 text-[clamp(0.75rem,3vw,0.95rem)] text-red-400">{error}</p> : null}
+        {error ? <p className="mt-2 text-sm text-red-400">{error}</p> : null}
 
         <Button
           className="mt-4 w-full rounded-xl py-2.5 text-sm sm:mt-5 sm:rounded-2xl sm:py-3 sm:text-base md:py-3.5"
@@ -115,7 +114,7 @@ export function ForgotPasswordPage() {
         {step === 'code' ? (
           <button
             type="button"
-            className="mt-3 w-full text-center text-[clamp(0.75rem,3vw,0.95rem)] text-mute"
+            className="mt-3 w-full text-center text-sm text-mute"
             onClick={() => {
               setStep('email')
               setCode('')
@@ -126,12 +125,11 @@ export function ForgotPasswordPage() {
           </button>
         ) : null}
 
-        <p className="mt-4 text-center text-[clamp(0.75rem,3vw,0.95rem)] text-mute">
+        <p className="mt-4 text-center text-sm text-mute">
           <Link to="/login" className="text-white underline">
             Girişe dön
           </Link>
         </p>
-      </form>
-    </div>
+    </AuthFrame>
   )
 }

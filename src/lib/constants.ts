@@ -7,6 +7,7 @@ export const CADDE54_RADIUS_M = 450
 export const HERE_DURATION_MS = 24 * 60 * 60 * 1000
 export const HERE_LEFT_MS = 11 * 60 * 1000
 export const STORY_TTL_MS = 24 * 60 * 60 * 1000
+export const BOOST_DURATION_MS = 24 * 60 * 60 * 1000
 
 export const ADMIN_ID = 'u_admin'
 export const MIN_AGE = 16

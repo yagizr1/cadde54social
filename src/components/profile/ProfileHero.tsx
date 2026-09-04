@@ -81,10 +81,12 @@ export function ProfileHero({
         </div>
       </div>
       <div className="mt-3 px-4">
-        <p className="text-[14px] font-semibold leading-tight">
-          {user.name}
-          {user.age ? `, ${user.age}` : ''}
-        </p>
+        <p className="text-[14px] font-semibold leading-tight">{user.name}</p>
+        {user.age ? (
+          <span className="mt-1.5 inline-flex rounded-full bg-white/10 px-2.5 py-0.5 text-[12px] font-semibold text-white/90">
+            Yaş {user.age}
+          </span>
+        ) : null}
         {here ? <p className="mt-0.5 text-[13px] text-hot">Cadde 54’te</p> : null}
         {locked ? <p className="mt-0.5 text-[13px] text-mute">Gizli hesap</p> : null}
         {user.bio ? <p className="mt-1 whitespace-pre-wrap text-[14px] leading-snug">{user.bio}</p> : null}

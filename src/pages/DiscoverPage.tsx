@@ -1,4 +1,4 @@
-import { Clapperboard, Search, X } from 'lucide-react'
+import { Clapperboard, Search, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from '../lib/nav'
 import { FeedPost } from '../components/feed/FeedPost'
@@ -11,6 +11,7 @@ import { searchHistoryService } from '../services/searchHistoryService'
 import { settingsService } from '../services/settingsService'
 import { userService } from '../services/userService'
 import { premiumService } from '../services/premiumService'
+import { isBoosted } from '../services/boostService'
 import type { Post, Reel } from '../types'
 
 type Tile =
@@ -31,26 +32,47 @@ function nextSquare(posts: Post[], reels: Reel[]): Tile | undefined {
   return takePost(posts) ?? takeReel(reels)
 }
 
+function rankContent(a: { userId: string; likes: string[]; createdAt: number; boostedUntil?: number | null }, b: typeof a) {
+  const ar = (isBoosted(a) ? 2 : 0) + (premiumService.isActive(userService.getById(a.userId)) ? 1 : 0)
+  const br = (isBoosted(b) ? 2 : 0) + (premiumService.isActive(userService.getById(b.userId)) ? 1 : 0)
+  if (ar !== br) return br - ar
+  return b.likes.length - a.likes.length || b.createdAt - a.createdAt
+}
+
+function takeFeatured(posts: Post[], reels: Reel[]): Tile | undefined {
+  const pBoost = posts.findIndex((p) => isBoosted(p))
+  const rBoost = reels.findIndex((r) => isBoosted(r))
+  if (pBoost >= 0 && (rBoost < 0 || (posts[pBoost].boostedUntil ?? 0) >= (reels[rBoost].boostedUntil ?? 0))) {
+    const [post] = posts.splice(pBoost, 1)
+    return post ? { key: `p-${post.id}-f`, kind: 'post', post, featured: true } : undefined
+  }
+  if (rBoost >= 0) {
+    const [reel] = reels.splice(rBoost, 1)
+    return reel ? { key: `r-${reel.id}-f`, kind: 'reel', reel, featured: true } : undefined
+  }
+  return takeReel(reels, true)
+}
+
 function buildTiles(posts: Post[], reels: Reel[]): Tile[] {
-  const postQ = [...posts].sort((a, b) => {
-    const ap = premiumService.isActive(userService.getById(a.userId)) ? 1 : 0
-    const bp = premiumService.isActive(userService.getById(b.userId)) ? 1 : 0
-    if (ap !== bp) return bp - ap
-    return b.likes.length - a.likes.length || b.createdAt - a.createdAt
-  })
-  const reelQ = [...reels].sort((a, b) => {
-    const ap = premiumService.isActive(userService.getById(a.userId)) ? 1 : 0
-    const bp = premiumService.isActive(userService.getById(b.userId)) ? 1 : 0
-    if (ap !== bp) return bp - ap
-    return b.likes.length - a.likes.length || b.createdAt - a.createdAt
-  })
+  const postQ = [...posts].sort(rankContent)
+  const reelQ = [...reels].sort(rankContent)
   const tiles: Tile[] = []
+
+  while (postQ.some(isBoosted) || reelQ.some(isBoosted)) {
+    const featured = takeFeatured(postQ, reelQ)
+    if (!featured) break
+    const extras = [nextSquare(postQ, reelQ), nextSquare(postQ, reelQ)].filter((t): t is Tile => Boolean(t))
+    if (extras.length >= 2) tiles.push(extras[0], extras[1], featured)
+    else if (extras.length) tiles.push(featured, ...extras)
+    else tiles.push(featured)
+  }
+
   let block = 0
 
   while (postQ.length || reelQ.length) {
     const side = block % 4 === 1 ? 'right' : block % 4 === 3 ? 'left' : null
     if (side && reelQ.length) {
-      const featured = takeReel(reelQ, true)
+      const featured = takeFeatured(postQ, reelQ)
       const extras = [nextSquare(postQ, reelQ), nextSquare(postQ, reelQ), nextSquare(postQ, reelQ), nextSquare(postQ, reelQ)].filter(
         (t): t is Tile => Boolean(t),
       )
@@ -224,11 +246,14 @@ export function DiscoverPage() {
                 onClick={() => setOpenPost(tile.post)}
                 className={
                   tile.featured
-                    ? 'row-span-2 h-full min-h-0 overflow-hidden bg-panel-2'
-                    : 'aspect-square overflow-hidden bg-panel-2'
+                    ? 'relative row-span-2 h-full min-h-0 overflow-hidden bg-panel-2'
+                    : 'relative aspect-square overflow-hidden bg-panel-2'
                 }
               >
                 <img src={tile.post.image} alt="" className="h-full w-full object-cover" />
+                {isBoosted(tile.post) ? (
+                  <Sparkles className="absolute top-2 left-2 h-4 w-4 fill-white text-white drop-shadow" />
+                ) : null}
               </button>
             ) : (
               <button
@@ -242,6 +267,9 @@ export function DiscoverPage() {
                 }
               >
                 <video src={tile.reel.videoUrl} muted playsInline preload="metadata" className="h-full w-full object-cover" />
+                {isBoosted(tile.reel) ? (
+                  <Sparkles className="absolute top-2 left-2 h-4 w-4 fill-white text-white drop-shadow" />
+                ) : null}
                 <Clapperboard className="absolute top-2 right-2 h-4 w-4 fill-white text-white drop-shadow" />
               </button>
             ),

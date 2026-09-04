@@ -9,11 +9,16 @@ import {
   Pencil,
   Pin,
   PinOff,
+  Sparkles,
   Trash2,
 } from 'lucide-react'
 import { useState } from 'react'
 import { copyText } from '../../lib/utils'
+import { BoostSheet } from '../premium/BoostSheet'
+import { boostService, isBoosted } from '../../services/boostService'
 import { postService } from '../../services/postService'
+import { premiumService } from '../../services/premiumService'
+import { userService } from '../../services/userService'
 import { useUiStore } from '../../store/uiStore'
 import type { Post } from '../../types'
 import { Sheet } from '../ui/Sheet'
@@ -35,10 +40,17 @@ export function OwnPostSheet({
 }) {
   const toast = useUiStore((s) => s.toast)
   const [deleteOpen, setDeleteOpen] = useState(false)
+  const [boostOpen, setBoostOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const me = userService.getById(meId)
+  const premium = premiumService.isActive(me)
+  const boosted = isBoosted(post)
+  const otherBoost = boostService.activeFor(meId)
+  const replacing = Boolean(otherBoost && !(otherBoost.kind === 'post' && otherBoost.id === post.id))
 
   function closeAll() {
     setDeleteOpen(false)
+    setBoostOpen(false)
     onClose()
   }
 
@@ -54,8 +66,8 @@ export function OwnPostSheet({
       toast(ok)
       onChange()
       closeAll()
-    } catch {
-      toast('İşlem yapılamadı', 'err')
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'İşlem yapılamadı', 'err')
     } finally {
       setBusy(false)
     }
@@ -63,8 +75,15 @@ export function OwnPostSheet({
 
   return (
     <>
-      <Sheet open={open && !deleteOpen} onClose={closeAll}>
+      <Sheet open={open && !deleteOpen && !boostOpen} onClose={closeAll}>
         <div className="space-y-1">
+          {post.archived ? null : (
+            <Action
+              icon={Sparkles}
+              label={boosted ? 'Öne çıkarılıyor' : 'Öne çıkar'}
+              onClick={() => setBoostOpen(true)}
+            />
+          )}
           <Action
             icon={Pencil}
             label="Düzenle"
@@ -130,6 +149,23 @@ export function OwnPostSheet({
           </button>
         </div>
       </Sheet>
+
+      <BoostSheet
+        open={open && boostOpen}
+        onClose={() => setBoostOpen(false)}
+        kindLabel="gönderi"
+        boosted={boosted}
+        hoursLeft={boostService.hoursLeft(post)}
+        replacing={replacing}
+        premium={premium}
+        busy={busy}
+        onConfirm={() =>
+          void run(() => boostService.setPost(post.id, meId, true), '24 saat öne çıkarıldı')
+        }
+        onStop={() =>
+          void run(() => boostService.setPost(post.id, meId, false), 'Öne çıkarma durdu')
+        }
+      />
 
       <Sheet open={open && deleteOpen} onClose={() => setDeleteOpen(false)} title="Gönderiyi sil?">
         <p className="mb-4 text-sm text-mute">Bu gönderi kalıcı olarak silinir. Geri alınamaz.</p>

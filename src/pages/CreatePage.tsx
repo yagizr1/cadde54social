@@ -15,7 +15,9 @@ import { PLACES } from '../data/places'
 import { uploadImageFile } from '../lib/uploadMedia'
 import { cx, uid } from '../lib/utils'
 import { mentionService } from '../services/mentionService'
+import { boostService } from '../services/boostService'
 import { postService } from '../services/postService'
+import { premiumService } from '../services/premiumService'
 import { reelsService } from '../services/reelsService'
 import { settingsService } from '../services/settingsService'
 import { storyService } from '../services/storyService'
@@ -82,6 +84,7 @@ export function CreatePage() {
   const [audience, setAudience] = useState<'everyone' | 'followers'>('everyone')
   const [hideLikes, setHideLikes] = useState(false)
   const [commentsOff, setCommentsOff] = useState(false)
+  const [boostOnShare, setBoostOnShare] = useState(false)
   const [altText, setAltText] = useState('')
   const [sheet, setSheet] = useState<'location' | 'tags' | 'audience' | null>(null)
   const [placeQuery, setPlaceQuery] = useState('')
@@ -123,6 +126,7 @@ export function CreatePage() {
     setAudience('everyone')
     setHideLikes(false)
     setCommentsOff(false)
+    setBoostOnShare(false)
     setAltText('')
     setSheet(null)
     setStep('gallery')
@@ -181,7 +185,7 @@ export function CreatePage() {
           return
         }
         const image = await uploadImageFile(active.file)
-        postService.create(user.id, image, caption.trim() || 'Cadde 54', {
+        const post = postService.create(user.id, image, caption.trim() || 'Cadde 54', {
           location: location.trim() || undefined,
           altText: altText.trim() || undefined,
           hideLikes,
@@ -195,7 +199,16 @@ export function CreatePage() {
           image,
           extraIds: taggedIds,
         })
-        toast('Gönderi paylaşıldı')
+        if (boostOnShare) {
+          try {
+            await boostService.setPost(post.id, user.id, true)
+            toast('Gönderi paylaşıldı ve öne çıkarıldı')
+          } catch (err) {
+            toast(err instanceof Error ? err.message : 'Gönderi paylaşıldı, öne çıkarılamadı', 'err')
+          }
+        } else {
+          toast('Gönderi paylaşıldı')
+        }
         clearCreateFiles()
         refresh()
         navigate('/')
@@ -230,7 +243,16 @@ export function CreatePage() {
         href: `/reels/${reel.id}`,
         extraIds: taggedIds,
       })
-      toast('Reels paylaşıldı')
+      if (boostOnShare) {
+        try {
+          await boostService.setReel(reel.id, user.id, true)
+          toast('Reels paylaşıldı ve öne çıkarıldı')
+        } catch (err) {
+          toast(err instanceof Error ? err.message : 'Reels paylaşıldı, öne çıkarılamadı', 'err')
+        }
+      } else {
+        toast('Reels paylaşıldı')
+      }
       clearCreateFiles()
       refresh()
       navigate('/reels')
@@ -449,6 +471,26 @@ export function CreatePage() {
                   />
                   <div className="mt-4 border-t border-white/10 px-4 py-4">
                     <p className="mb-3 text-[13px] font-semibold text-mute">Gelişmiş ayarlar</p>
+                    <div className="flex items-center justify-between gap-3 py-2">
+                      <div>
+                        <p className="text-[15px]">Öne çıkar</p>
+                        <p className="text-[12px] text-mute">
+                          {premiumService.isActive(user)
+                            ? 'Paylaşınca 24 saat Keşfet ve akışta önde durur.'
+                            : 'Premium ile 24 saat öne çıkar.'}
+                        </p>
+                      </div>
+                      <Toggle
+                        on={boostOnShare}
+                        onChange={(next) => {
+                          if (next && !premiumService.isActive(user)) {
+                            navigate('/premium')
+                            return
+                          }
+                          setBoostOnShare(next)
+                        }}
+                      />
+                    </div>
                     <div className="flex items-center justify-between gap-3 py-2">
                       <p className="text-[15px]">Beğeni sayısını gizle</p>
                       <Toggle on={hideLikes} onChange={setHideLikes} />

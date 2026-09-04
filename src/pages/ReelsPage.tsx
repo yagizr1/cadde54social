@@ -1,8 +1,9 @@
-import { Bookmark, MessageCircle, Repeat2, Volume2, VolumeX, ChevronLeft } from 'lucide-react'
+import { Bookmark, MessageCircle, Repeat2, Sparkles, Volume2, VolumeX, ChevronLeft } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Link, useNavigate } from '../lib/nav'
 import { CommentSheet } from '../components/ui/CommentSheet'
+import { BoostSheet } from '../components/premium/BoostSheet'
 import { MentionText } from '../components/ui/MentionText'
 import { LikeButton } from '../components/ui/LikeButton'
 import { QuickShareButton } from '../components/ui/QuickShareButton'
@@ -11,6 +12,8 @@ import { goBack } from '../components/layout/BackButton'
 import { useApp } from '../hooks/useApp'
 import { cx, formatCount } from '../lib/utils'
 import { postService } from '../services/postService'
+import { boostService, isBoosted } from '../services/boostService'
+import { premiumService } from '../services/premiumService'
 import { reelsService } from '../services/reelsService'
 import { repostService } from '../services/repostService'
 import { settingsService } from '../services/settingsService'
@@ -81,6 +84,8 @@ function ReelSlide({
   const wrap = useRef<HTMLElement>(null)
   const [open, setOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
+  const [boostOpen, setBoostOpen] = useState(false)
+  const [boostBusy, setBoostBusy] = useState(false)
   const [url, setUrl] = useState(reel.videoUrl)
   const toast = useUiStore((s) => s.toast)
   const author = userService.getById(reel.userId)
@@ -88,6 +93,10 @@ function ReelSlide({
   const saved = reel.saves.includes(meId)
   const reposted = repostService.has(meId, 'reel', reel.id)
   const visibleComments = postService.visibleComments(reel.comments, meId, reel.userId)
+  const me = userService.getById(meId)
+  const boosted = isBoosted(reel)
+  const otherBoost = boostService.activeFor(meId)
+  const replacing = Boolean(otherBoost && !(otherBoost.kind === 'reel' && otherBoost.id === reel.id))
 
   useEffect(() => {
     let alive = true
@@ -128,6 +137,7 @@ function ReelSlide({
         <Link to={`/u/${author?.username}`} className="flex items-center gap-2">
           <img src={author?.avatar} alt="" className="h-8 w-8 rounded-full object-cover" />
           <span className="text-[14px] font-semibold">{author?.username}</span>
+          {boosted ? <span className="text-[12px] font-medium text-hot">Öne çıkan</span> : null}
         </Link>
         <p className="mt-2 max-w-[78%] text-[14px] text-white/90">
           <MentionText text={reel.caption} />
@@ -151,6 +161,11 @@ function ReelSlide({
           <MessageCircle className="h-8 w-8" />
           <p className="text-xs">{visibleComments.length}</p>
         </button>
+        {reel.userId === meId ? (
+          <button type="button" aria-label="Öne çıkar" onClick={() => setBoostOpen(true)} className="text-center">
+            <Sparkles className={cx('h-8 w-8', boosted && 'fill-hot text-hot')} />
+          </button>
+        ) : null}
         {reel.userId !== meId ? (
           <button
             type="button"
@@ -185,6 +200,42 @@ function ReelSlide({
           <Bookmark className={cx('h-8 w-8', saved && 'fill-white')} />
         </button>
       </div>
+      <BoostSheet
+        open={boostOpen}
+        onClose={() => setBoostOpen(false)}
+        kindLabel="Reels"
+        boosted={boosted}
+        hoursLeft={boostService.hoursLeft(reel)}
+        replacing={replacing}
+        premium={premiumService.isActive(me)}
+        busy={boostBusy}
+        onConfirm={() => {
+          if (boostBusy) return
+          setBoostBusy(true)
+          void boostService
+            .setReel(reel.id, meId, true)
+            .then(() => {
+              toast('24 saat öne çıkarıldı')
+              setBoostOpen(false)
+              onChange()
+            })
+            .catch((e) => toast(e instanceof Error ? e.message : 'İşlem yapılamadı', 'err'))
+            .finally(() => setBoostBusy(false))
+        }}
+        onStop={() => {
+          if (boostBusy) return
+          setBoostBusy(true)
+          void boostService
+            .setReel(reel.id, meId, false)
+            .then(() => {
+              toast('Öne çıkarma durdu')
+              setBoostOpen(false)
+              onChange()
+            })
+            .catch((e) => toast(e instanceof Error ? e.message : 'İşlem yapılamadı', 'err'))
+            .finally(() => setBoostBusy(false))
+        }}
+      />
       <CommentSheet
         open={open}
         onClose={() => setOpen(false)}

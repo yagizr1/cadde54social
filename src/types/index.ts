@@ -67,6 +67,7 @@ export interface Post {
   audience?: 'everyone' | 'followers'
   archived?: boolean
   pinnedAt?: number | null
+  boostedUntil?: number | null
 }
 
 export interface Story {
@@ -91,6 +92,7 @@ export interface Reel {
   comments: Comment[]
   saves: string[]
   createdAt: number
+  boostedUntil?: number | null
 }
 
 export interface Confession {

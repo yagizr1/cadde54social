@@ -7,6 +7,7 @@ import { getItem, setItem } from './storage'
 import { sync } from './syncService'
 import { userService } from './userService'
 import { premiumService } from './premiumService'
+import { isBoosted } from './boostService'
 
 function all(): Repost[] {
   return getItem<Repost[]>('reposts', [])
@@ -106,10 +107,15 @@ export const repostService = {
     const items = this.feed()
     const following = items.filter(fromFollow)
     const seenPosts = new Set(following.map((item) => item.post.id))
-    const boost = (item: FeedEntry) =>
-      premiumService.isActive(userService.getById(item.post.userId)) ? 1 : 0
+    const boostScore = (item: FeedEntry) =>
+      isBoosted(item.post) ? 2 : premiumService.isActive(userService.getById(item.post.userId)) ? 1 : 0
+    const boostOnly = (item: FeedEntry) => (isBoosted(item.post) ? 1 : 0)
     const byBoost = (a: FeedEntry, b: FeedEntry) => {
-      const d = boost(b) - boost(a)
+      const d = boostScore(b) - boostScore(a)
+      return d !== 0 ? d : b.createdAt - a.createdAt
+    }
+    const byBoostedThenTime = (a: FeedEntry, b: FeedEntry) => {
+      const d = boostOnly(b) - boostOnly(a)
       return d !== 0 ? d : b.createdAt - a.createdAt
     }
     const suggested = items
@@ -119,17 +125,18 @@ export const repostService = {
 
     const remembered = seenKeys(viewerId)
     if (remembered.size === 0) {
-      return [...following.sort((a, b) => b.createdAt - a.createdAt), ...suggested]
+      return [...following.sort(byBoostedThenTime), ...suggested]
     }
 
     const isNew = (item: FeedEntry) => !remembered.has(item.key)
     const split = (list: FeedEntry[], salt: number, featured = false) => {
-      const fresh = list.filter(isNew).sort(featured ? byBoost : (a, b) => b.createdAt - a.createdAt)
+      const fresh = list.filter(isNew).sort(featured ? byBoost : byBoostedThenTime)
       const rest = shuffle(
         list.filter((item) => !isNew(item)),
         seed + salt,
       )
-      if (featured) rest.sort((a, b) => boost(b) - boost(a))
+      if (featured) rest.sort((a, b) => boostScore(b) - boostScore(a))
+      else rest.sort((a, b) => boostOnly(b) - boostOnly(a))
       return [...fresh, ...rest]
     }
 

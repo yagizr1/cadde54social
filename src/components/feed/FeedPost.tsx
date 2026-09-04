@@ -7,6 +7,7 @@ import { repostService } from '../../services/repostService'
 import { settingsService } from '../../services/settingsService'
 import { storyService } from '../../services/storyService'
 import { userService } from '../../services/userService'
+import { isBoosted } from '../../services/boostService'
 import { useUiStore } from '../../store/uiStore'
 import type { Post } from '../../types'
 import { UserActionsSheet } from '../profile/UserActionsSheet'
@@ -113,12 +114,15 @@ export function FeedPost({
           <Link to={`/u/${user.username}`} className="block truncate text-[13px] font-semibold">
             {user.username}
           </Link>
-          {post.location || post.sponsored || suggested ? (
+          {post.location || post.sponsored || suggested || isBoosted(post) ? (
             <p className="truncate text-[11px] text-mute">
-              {suggested ? 'Önerilen' : null}
-              {suggested && (post.location || post.sponsored) ? ' · ' : ''}
-              {post.location}
-              {post.sponsored ? `${post.location ? ' · ' : ''}Sponsorlu` : ''}
+              {[
+                isBoosted(post) ? 'Öne çıkan' : suggested ? 'Önerilen' : null,
+                post.location,
+                post.sponsored && !isBoosted(post) ? 'Sponsorlu' : null,
+              ]
+                .filter(Boolean)
+                .join(' · ')}
             </p>
           ) : null}
         </div>

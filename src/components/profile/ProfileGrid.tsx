@@ -1,7 +1,8 @@
-import { Pin, Repeat2, X } from 'lucide-react'
+import { Pin, Repeat2, Sparkles, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { postService } from '../../services/postService'
+import { isBoosted } from '../../services/boostService'
 import type { Post } from '../../types'
 import { FeedPost } from '../feed/FeedPost'
 import { EmptyProfileGrid, profileCellClass, profileGridClass } from './EmptyProfileGrid'
@@ -60,6 +61,9 @@ export function ProfileGrid({
           >
             <img src={post.image} alt="" className="h-full w-full object-cover" />
             {post.pinnedAt ? <Pin className="absolute top-1.5 left-1.5 h-3.5 w-3.5 fill-white text-white drop-shadow" /> : null}
+            {isBoosted(post) ? (
+              <Sparkles className="absolute top-1.5 right-1.5 h-3.5 w-3.5 fill-white text-white drop-shadow" />
+            ) : null}
             {repostBadge ? <Repeat2 className="absolute right-1.5 bottom-1.5 h-4 w-4 text-white drop-shadow" /> : null}
           </button>
         ))}

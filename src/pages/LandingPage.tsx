@@ -69,7 +69,7 @@ const premiumFeatures = [
   { icon: Flame, title: 'Tanış', text: 'Tinder tarzı bir özellik. Kaydır, beğen, eşleş.' },
   { icon: Eye, title: 'Kimler baktı', text: 'Profilini kimlerin gördüğünü gör.' },
   { icon: Zap, title: 'İstatistikler', text: 'Detaylı profil istatistikleri ve içgörüler.' },
-  { icon: Sparkles, title: 'Öne çıkarma', text: 'Profilin keşfette daha görünür olur.' },
+  { icon: Sparkles, title: 'Öne çıkarma', text: 'Gönderini 24 saat Keşfet’te büyük göster, akışta üste çıkar.' },
   { icon: BadgeCheck, title: 'Mavi tik', text: 'Onaylı hesap işareti profilinde durur.' },
   { icon: EyeOff, title: 'Hayalet modu', text: 'Başkalarının profilini görüntüleyince seni göremezler.' },
 ]
@@ -226,7 +226,7 @@ export function LandingPage() {
 
       <footer className="border-t border-white/10">
         <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-3 px-4 py-6 text-[12px] text-mute">
-          <p>Cadde54 Social · Bağdat Caddesi</p>
+          <p>Cadde54 Social · Serdivan</p>
           <div className="flex flex-wrap gap-4">
             <Link to={`${APP_BASE}/login`}>Giriş</Link>
             <Link to={`${APP_BASE}/register`}>Kayıt</Link>

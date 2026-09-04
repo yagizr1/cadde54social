@@ -7,6 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1" />
     <meta name="theme-color" content="#07070B" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Cadde54 Social" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="Cadde54 Social — Bağdat Caddesi sosyal ağı. Gönderi, hikâye, tanış, buluşma ve Buradayım." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -14,6 +15,23 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Syne:wght@600;700;800&display=swap" rel="stylesheet" />
     <title>Cadde54 Social</title>
     <script>
+      (function () {
+        var standalone =
+          window.matchMedia('(display-mode: standalone)').matches ||
+          window.matchMedia('(display-mode: minimal-ui)').matches ||
+          Boolean(window.navigator.standalone)
+        if (!standalone) return
+        var path = window.location.pathname
+        if (
+          path === '/' ||
+          path === '/sartlar' ||
+          path === '/gizlilik' ||
+          path === '/terms' ||
+          path === '/privacy'
+        ) {
+          window.location.replace('/app/login')
+        }
+      })()
       window.__c54pwa = null
       window.addEventListener('beforeinstallprompt', function (event) {
         event.preventDefault()
