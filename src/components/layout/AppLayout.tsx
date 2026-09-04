@@ -4,20 +4,24 @@ import { appRoute } from '../../lib/appPath'
 import { Link } from '../../lib/nav'
 import { cx } from '../../lib/utils'
 import { notificationService } from '../../services/notificationService'
+import { messageService } from '../../services/messageService'
 import { useApp } from '../../hooks/useApp'
-import { BackButton } from './BackButton'
-import { BrandMark } from './BrandMark'
-import { BottomNav } from './BottomNav'
-import { PullToRefresh } from './PullToRefresh'
-import { AccountSwitcherSheet } from './AccountSwitcherSheet'
-import { CreateSheet } from './CreateSheet'
-import { Sidebar } from './Sidebar'
+import { CountBadge } from '../ui/CountBadge'
 import { StoryViewer } from '../feed/StoryViewer'
+import { PushPrompt } from '../pwa/PushPrompt'
+import { AccountSwitcherSheet } from './AccountSwitcherSheet'
+import { BackButton } from './BackButton'
+import { BottomNav } from './BottomNav'
+import { BrandMark } from './BrandMark'
+import { CreateSheet } from './CreateSheet'
+import { PullToRefresh } from './PullToRefresh'
+import { Sidebar } from './Sidebar'
 
 export function AppLayout() {
   const location = useLocation()
   const { user, tick, refresh } = useApp()
   const unread = user ? notificationService.unreadCount(user.id) : 0
+  const msgUnread = user ? messageService.unreadCount(user.id) : 0
   void tick
   const path = appRoute(location.pathname)
   const atHome = path === '/'
@@ -44,7 +48,7 @@ export function AppLayout() {
           {!hideHeader ? (
             <header
               className={cx(
-                'sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-ink px-3 py-1.5',
+                'safe-head sticky top-0 z-30 flex items-center justify-between border-b border-white/10 bg-ink px-3 pb-1.5',
                 atHome && 'lg:hidden',
               )}
             >
@@ -57,8 +61,13 @@ export function AppLayout() {
                   <Heart className="h-6 w-6" />
                   {unread > 0 ? <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-[#ff3040]" /> : null}
                 </Link>
-                <Link to="/messages" className="grid h-10 w-10 place-items-center" aria-label="Mesajlar">
+                <Link
+                  to="/messages"
+                  className="relative grid h-10 w-10 place-items-center"
+                  aria-label={msgUnread ? `Mesajlar, ${msgUnread} yeni` : 'Mesajlar'}
+                >
                   <Send className="h-6 w-6" />
+                  <CountBadge count={msgUnread} className="absolute top-0 right-0" />
                 </Link>
               </div>
             </header>
@@ -71,6 +80,7 @@ export function AppLayout() {
         </div>
       </div>
       {!hideNav ? <BottomNav /> : null}
+      <PushPrompt />
       <CreateSheet />
       <AccountSwitcherSheet />
       <StoryViewer onChange={refresh} />

@@ -12,7 +12,7 @@ export function PostPage() {
 
   return (
     <div className="mx-auto max-w-xl anim-page">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
+      <header className="safe-topbar sticky top-0 z-20 flex items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
         <BackButton />
         <h1 className="text-[18px] font-bold">Gönderi</h1>
       </header>

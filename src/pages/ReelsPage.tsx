@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import { Link, useNavigate } from '../lib/nav'
 import { CommentSheet } from '../components/ui/CommentSheet'
+import { LikersSheet } from '../components/ui/LikersSheet'
 import { BoostSheet } from '../components/premium/BoostSheet'
 import { MentionText } from '../components/ui/MentionText'
 import { LikeButton } from '../components/ui/LikeButton'
@@ -39,7 +40,7 @@ export function ReelsPage() {
 
   return (
     <div className="relative h-dvh bg-black lg:pl-0">
-      <div className="absolute inset-x-0 top-0 z-20 flex h-12 items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-2 pt-[env(safe-area-inset-top)]">
+      <div className="safe-topbar absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/70 to-transparent px-2">
         <div className="flex items-center">
           <button
             type="button"
@@ -83,6 +84,7 @@ function ReelSlide({
   const ref = useRef<HTMLVideoElement>(null)
   const wrap = useRef<HTMLElement>(null)
   const [open, setOpen] = useState(false)
+  const [likersOpen, setLikersOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [boostOpen, setBoostOpen] = useState(false)
   const [boostBusy, setBoostBusy] = useState(false)
@@ -93,6 +95,7 @@ function ReelSlide({
   const saved = reel.saves.includes(meId)
   const reposted = repostService.has(meId, 'reel', reel.id)
   const visibleComments = postService.visibleComments(reel.comments, meId, reel.userId)
+  const likesHidden = settingsService.get(reel.userId).hideLikes && meId !== reel.userId
   const me = userService.getById(meId)
   const boosted = isBoosted(reel)
   const otherBoost = boostService.activeFor(meId)
@@ -155,7 +158,11 @@ function ReelSlide({
               onChange()
             }}
           />
-          <p className="mt-1 text-xs">{formatCount(reel.likes.length)}</p>
+          {likesHidden ? null : (
+            <button type="button" className="mt-1 text-xs" onClick={() => setLikersOpen(true)}>
+              {formatCount(reel.likes.length)}
+            </button>
+          )}
         </div>
         <button onClick={() => setOpen(true)} className="text-center">
           <MessageCircle className="h-8 w-8" />
@@ -242,8 +249,12 @@ function ReelSlide({
         comments={visibleComments}
         ownerId={reel.userId}
         mentionHref={`/reels/${reel.id}`}
-        onSend={(text) => {
-          reelsService.comment(reel.id, meId, text)
+        onSend={(text, parentId) => {
+          reelsService.comment(reel.id, meId, text, parentId)
+          onChange()
+        }}
+        onLike={(commentId) => {
+          reelsService.toggleCommentLike(reel.id, commentId, meId)
           onChange()
         }}
         onApprove={(commentId) => {
@@ -251,6 +262,7 @@ function ReelSlide({
           onChange()
         }}
       />
+      <LikersSheet open={likersOpen} onClose={() => setLikersOpen(false)} userIds={reel.likes} />
       <ShareSheet
         open={shareOpen}
         onClose={() => setShareOpen(false)}

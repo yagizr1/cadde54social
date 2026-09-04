@@ -172,7 +172,7 @@ export function StoryViewer({ onChange }: { onChange?: () => void }) {
       <img src={liveStory.image} alt="" className="absolute inset-0 h-full w-full object-cover" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black/55" />
       <div className="relative flex h-full flex-col">
-        <div className="relative z-10 flex gap-1 px-3 pt-3">
+        <div className="relative z-10 flex gap-1 px-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
           {group.stories.map((s, i) => (
             <div key={s.id} className="h-1 flex-1 overflow-hidden rounded-full bg-white/25">
               <div
@@ -361,6 +361,8 @@ export function StoryViewer({ onChange }: { onChange?: () => void }) {
                         recipientId: liveStory.userId,
                         text: 'story’ni beğendi',
                         href: `/u/${me.username}`,
+                        image: liveStory.image,
+                        groupKey: `like:story:${liveStory.id}`,
                       })
                     }
                     setTick((n) => n + 1)

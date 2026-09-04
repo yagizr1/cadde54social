@@ -39,9 +39,7 @@ export function MessagesPage() {
         const other = otherId ? userService.getById(otherId) : undefined
         const last = c.messages[c.messages.length - 1]
         if (!otherId) return null
-        const unread = Boolean(
-          last && last.senderId !== user.id && (c.lastRead?.[user.id] ?? 0) < last.createdAt,
-        )
+        const unread = messageService.unread(c, user.id)
         return { c, otherId, other, last, unread }
       })
       .filter((row): row is NonNullable<typeof row> => {
@@ -96,7 +94,7 @@ export function MessagesPage() {
 
   return (
     <div className="mx-auto max-w-xl anim-page">
-      <header className="sticky top-0 z-20 bg-ink">
+      <header className="safe-t sticky top-0 z-20 bg-ink">
         <div className="flex h-12 items-center gap-1 px-1">
           <BackButton to="/" />
           {selecting ? (
@@ -220,7 +218,9 @@ export function MessagesPage() {
               here={other ? settingsService.isHereVisible(other.id, other.hereUntil, user.id) : false}
               preview={
                 last
-                  ? `${last.senderId === user.id ? 'Sen: ' : ''}${last.text || (last.image ? 'Fotoğraf' : 'Mesaj')}`
+                  ? `${last.senderId === user.id ? 'Sen: ' : ''}${
+                      last.viewOnce ? 'Fotoğraf' : last.text || (last.image ? 'Fotoğraf' : 'Mesaj')
+                    }`
                   : 'Yeni sohbet'
               }
               time={last ? timeAgo(last.createdAt) : ''}

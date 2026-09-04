@@ -1,4 +1,5 @@
 import { loadDb, saveDb, uid, token } from './db.mjs'
+import { dispatchPush } from './push.mjs'
 import { hashPassword, isHashed, verifyPassword } from './password.mjs'
 
 const ADMIN_ID = 'u_admin'
@@ -58,6 +59,7 @@ function followUser(db, me, target, silent = false) {
       recipientId: target.id,
       text: 'seni takip etmeye başladı',
       href: `/u/${me.username}`,
+      groupKey: `follow:${me.id}`,
     })
   }
 }
@@ -264,17 +266,81 @@ function appHref(path) {
   return path.startsWith('/') ? `/app${path}` : path
 }
 
+function inferGroupKey(n) {
+  if (n.groupKey) return n.groupKey
+  const href = String(n.href || '')
+  const postId = href.match(/\/p\/([^/?#]+)/)?.[1]
+  const reelId = href.match(/\/reels\/([^/?#]+)/)?.[1]
+  const convId = href.match(/\/messages\/([^/?#]+)/)?.[1]
+  const text = String(n.text || '').toLowerCase()
+  if (n.type === 'like') {
+    if (text.includes('yorum') && n.actorId && postId) return `like:comment:${postId}:${n.actorId}`
+    if (postId) return `like:post:${postId}`
+    if (reelId) return `like:reel:${reelId}`
+    if (text.includes('story') && n.actorId) return `like:story-actor:${n.actorId}`
+  }
+  if (n.type === 'comment' && n.actorId) {
+    if (postId) return `comment:post:${postId}:${n.actorId}`
+    if (reelId) return `comment:reel:${reelId}:${n.actorId}`
+  }
+  if (n.type === 'follow' && n.actorId) return `follow:${n.actorId}`
+  if (n.type === 'view' && n.actorId) {
+    return text.includes('profil') ? `view:profile:${n.actorId}` : `view:story:${n.actorId}`
+  }
+  if (n.type === 'message' && convId) return `message:${convId}`
+  if (n.type === 'mention' && n.actorId) return `mention:${href}:${n.actorId}`
+  if (n.type === 'meet_like') return 'meet_like'
+  if (n.type === 'repost' && n.actorId) return `repost:${href}:${n.actorId}`
+  return null
+}
+
 function notify(db, n) {
   if (n.actorId && n.recipientId && n.actorId === n.recipientId) return
   if (n.actorId && n.recipientId && hiddenFrom(db, n.recipientId, n.actorId)) return
+  const href = n.href ? appHref(n.href) : n.href
+  const groupKey = inferGroupKey({ ...n, href })
+  if (groupKey) n = { ...n, groupKey }
+  const key = groupKey && n.recipientId ? `${n.recipientId}:${groupKey}` : null
+  if (key) {
+    const existing = db.notifications.find((x) => {
+      const xKey = inferGroupKey(x)
+      return x.recipientId === n.recipientId && xKey && xKey === groupKey
+    })
+    if (existing) {
+      const actorIds = [...(existing.actorIds ?? (existing.actorId ? [existing.actorId] : []))]
+      if (n.actorId && !actorIds.includes(n.actorId)) actorIds.push(n.actorId)
+      existing.actorId = n.actorId ?? existing.actorId
+      existing.actorIds = actorIds
+      existing.groupKey = groupKey
+      existing.text = n.text || existing.text
+      existing.image = n.image || existing.image
+      existing.href = href ?? existing.href
+      existing.createdAt = Date.now()
+      existing.read = false
+      db.notifications = [existing, ...db.notifications.filter((x) => x.id !== existing.id)].slice(0, 80)
+      const silent =
+        n.type === 'like' ||
+        n.type === 'follow' ||
+        n.type === 'view' ||
+        n.type === 'comment' ||
+        n.type === 'mention' ||
+        n.type === 'meet_like' ||
+        n.type === 'repost'
+      if (!silent) dispatchPush(db, existing)
+      return
+    }
+  }
   db.notifications.unshift({
     id: uid('n'),
     read: false,
     createdAt: Date.now(),
     ...n,
-    href: n.href ? appHref(n.href) : n.href,
+    href,
+    groupKey: groupKey || n.groupKey,
+    actorIds: n.actorId ? [n.actorId] : n.actorIds,
   })
   db.notifications = db.notifications.slice(0, 80)
+  dispatchPush(db, db.notifications[0])
 }
 
 function addXp(db, userId, amount, reason) {
@@ -537,6 +603,7 @@ export function runAction(meId, name, body = {}) {
           text: 'gönderini beğendi',
           href: `/p/${post.id}`,
           image: post.image,
+          groupKey: `like:post:${post.id}`,
         })
       }
     },
@@ -548,12 +615,16 @@ export function runAction(meId, name, body = {}) {
       const post = db.posts.find((p) => p.id === body.postId)
       if (!post || (post.commentsOff && post.userId !== meId)) return
       const hidden = Boolean(body.hidden)
+      const parent = body.parentId ? post.comments.find((c) => c.id === body.parentId) : null
+      const parentId = parent?.parentId ?? parent?.id
       post.comments.push({
         id: body.commentId || uid('c'),
         userId: meId,
         text: body.text,
         createdAt: Date.now(),
         hidden: hidden || undefined,
+        parentId: parentId || undefined,
+        likes: [],
       })
       db.commentCount += 1
       addXp(db, meId, 5, 'Yorum')
@@ -564,7 +635,39 @@ export function runAction(meId, name, body = {}) {
         text: `yorum yaptı: ${String(body.text).slice(0, 80)}`,
         href: `/p/${post.id}`,
         image: post.image,
+        groupKey: `comment:post:${post.id}:${meId}`,
       })
+      if (parent && parent.userId !== meId && parent.userId !== post.userId) {
+        notify(db, {
+          type: 'comment',
+          actorId: meId,
+          recipientId: parent.userId,
+          text: `yorumuna yanıt verdi: ${String(body.text).slice(0, 80)}`,
+          href: `/p/${post.id}`,
+          image: post.image,
+          groupKey: `comment:reply:${parent.id}:${meId}`,
+        })
+      }
+    },
+    'posts.commentLike'() {
+      const post = db.posts.find((p) => p.id === body.postId)
+      if (!post) return
+      const row = post.comments.find((c) => c.id === body.commentId)
+      if (!row) return
+      row.likes = row.likes ?? []
+      const liked = row.likes.includes(meId)
+      row.likes = toggleId(row.likes, meId)
+      if (!liked) {
+        notify(db, {
+          type: 'like',
+          actorId: meId,
+          recipientId: row.userId,
+          text: 'yorumunu beğendi',
+          href: `/p/${post.id}`,
+          image: post.image,
+          groupKey: `like:comment:${row.id}`,
+        })
+      }
     },
     'posts.approveComment'() {
       const post = db.posts.find((p) => p.id === body.postId)
@@ -600,7 +703,18 @@ export function runAction(meId, name, body = {}) {
     },
     'stories.view'() {
       const story = db.stories.find((s) => s.id === body.storyId)
-      if (story && !story.viewedBy.includes(meId)) story.viewedBy.push(meId)
+      if (!story || story.viewedBy.includes(meId)) return
+      story.viewedBy.push(meId)
+      const owner = findUser(db, story.userId)
+      notify(db, {
+        type: 'view',
+        actorId: meId,
+        recipientId: story.userId,
+        text: 'hikayeni görüntüledi',
+        href: owner ? `/u/${owner.username}` : '/',
+        image: story.image,
+        groupKey: `view:story:${meId}`,
+      })
     },
     'stories.like'() {
       const story = db.stories.find((s) => s.id === body.storyId)
@@ -608,7 +722,15 @@ export function runAction(meId, name, body = {}) {
       const liked = story.likes.includes(meId)
       story.likes = toggleId(story.likes, meId)
       if (!liked) {
-        notify(db, { type: 'like', actorId: meId, recipientId: story.userId, text: 'story’ni beğendi', href: `/u/${me.username}` })
+        notify(db, {
+          type: 'like',
+          actorId: meId,
+          recipientId: story.userId,
+          text: 'story’ni beğendi',
+          href: `/u/${me.username}`,
+          image: story.image,
+          groupKey: `like:story:${story.id}`,
+        })
       }
     },
     'stories.remove'() {
@@ -629,7 +751,19 @@ export function runAction(meId, name, body = {}) {
     },
     'reels.like'() {
       const reel = db.reels.find((r) => r.id === body.reelId)
-      if (reel) reel.likes = toggleId(reel.likes, meId)
+      if (!reel) return
+      const liked = reel.likes.includes(meId)
+      reel.likes = toggleId(reel.likes, meId)
+      if (!liked) {
+        notify(db, {
+          type: 'like',
+          actorId: meId,
+          recipientId: reel.userId,
+          text: 'Reels’ini beğendi',
+          href: `/reels/${reel.id}`,
+          groupKey: `like:reel:${reel.id}`,
+        })
+      }
     },
     'reels.save'() {
       const reel = db.reels.find((r) => r.id === body.reelId)
@@ -639,13 +773,54 @@ export function runAction(meId, name, body = {}) {
       const reel = db.reels.find((r) => r.id === body.reelId)
       if (!reel) return
       const hidden = Boolean(body.hidden)
+      const parent = body.parentId ? reel.comments.find((c) => c.id === body.parentId) : null
+      const parentId = parent?.parentId ?? parent?.id
       reel.comments.push({
         id: body.commentId || uid('c'),
         userId: meId,
         text: body.text,
         createdAt: Date.now(),
         hidden: hidden || undefined,
+        parentId: parentId || undefined,
+        likes: [],
       })
+      notify(db, {
+        type: 'comment',
+        actorId: meId,
+        recipientId: reel.userId,
+        text: `yorum yaptı: ${String(body.text).slice(0, 80)}`,
+        href: `/reels/${reel.id}`,
+        groupKey: `comment:reel:${reel.id}:${meId}`,
+      })
+      if (parent && parent.userId !== meId && parent.userId !== reel.userId) {
+        notify(db, {
+          type: 'comment',
+          actorId: meId,
+          recipientId: parent.userId,
+          text: `yorumuna yanıt verdi: ${String(body.text).slice(0, 80)}`,
+          href: `/reels/${reel.id}`,
+          groupKey: `comment:reply:${parent.id}:${meId}`,
+        })
+      }
+    },
+    'reels.commentLike'() {
+      const reel = db.reels.find((r) => r.id === body.reelId)
+      if (!reel) return
+      const row = reel.comments.find((c) => c.id === body.commentId)
+      if (!row) return
+      row.likes = row.likes ?? []
+      const liked = row.likes.includes(meId)
+      row.likes = toggleId(row.likes, meId)
+      if (!liked) {
+        notify(db, {
+          type: 'like',
+          actorId: meId,
+          recipientId: row.userId,
+          text: 'yorumunu beğendi',
+          href: `/reels/${reel.id}`,
+          groupKey: `like:comment:${row.id}`,
+        })
+      }
     },
     'reels.approveComment'() {
       const reel = db.reels.find((r) => r.id === body.reelId)
@@ -681,7 +856,24 @@ export function runAction(meId, name, body = {}) {
     'confessions.comment'() {
       const row = db.confessions.find((c) => c.id === body.id)
       if (!row) return
-      row.comments.push({ id: body.commentId || uid('c'), userId: meId, text: body.text, createdAt: Date.now() })
+      const parent = body.parentId ? row.comments.find((c) => c.id === body.parentId) : null
+      const parentId = parent?.parentId ?? parent?.id
+      row.comments.push({
+        id: body.commentId || uid('c'),
+        userId: meId,
+        text: body.text,
+        createdAt: Date.now(),
+        parentId: parentId || undefined,
+        likes: [],
+      })
+    },
+    'confessions.commentLike'() {
+      const row = db.confessions.find((c) => c.id === body.id)
+      if (!row) return
+      const comment = row.comments.find((c) => c.id === body.commentId)
+      if (!comment) return
+      comment.likes = comment.likes ?? []
+      comment.likes = toggleId(comment.likes, meId)
     },
     'confessions.report'() {
       const row = db.confessions.find((c) => c.id === body.id)
@@ -719,6 +911,8 @@ export function runAction(meId, name, body = {}) {
         replyTo: body.replyTo,
         reactions: [],
         createdAt: Date.now(),
+        viewOnce: Boolean(body.viewOnce) || undefined,
+        openedBy: [],
       })
       conv.updatedAt = Date.now()
       delete conv.pendingRequestFor
@@ -730,6 +924,7 @@ export function runAction(meId, name, body = {}) {
           text: 'sana bir mesaj gönderdi',
           href: `/messages/${conv.id}`,
           image: me.avatar,
+          groupKey: `message:${conv.id}`,
         })
       }
     },
@@ -745,6 +940,15 @@ export function runAction(meId, name, body = {}) {
         createdAt: Date.now(),
       })
       conv.updatedAt = Date.now()
+    },
+    'messages.openOnce'() {
+      const conv = db.conversations.find((c) => c.id === body.conversationId)
+      if (!conv || !conv.participantIds.includes(meId)) return
+      const msg = conv.messages.find((m) => m.id === body.messageId)
+      if (!msg?.viewOnce) return
+      const opened = msg.openedBy ?? []
+      if (opened.includes(meId)) return
+      msg.openedBy = [...opened, meId]
     },
     'messages.read'() {
       const conv = db.conversations.find((c) => c.id === body.conversationId)
@@ -784,6 +988,7 @@ export function runAction(meId, name, body = {}) {
         text: body.text,
         href: body.href,
         image: body.image,
+        groupKey: body.groupKey,
       })
     },
     'notifications.readAll'() {
@@ -818,6 +1023,7 @@ export function runAction(meId, name, body = {}) {
             recipientId: body.authorId,
             text: body.kind === 'reel' ? 'reels’ini tekrar paylaştı' : 'gönderini tekrar paylaştı',
             href: `/u/${me.username}`,
+            groupKey: `repost:${body.kind}:${body.targetId}`,
           })
         }
       }
@@ -838,6 +1044,7 @@ export function runAction(meId, name, body = {}) {
         recipientId: body.toId,
         text: 'Yeni bir beğeni! Birisi seni beğendi.',
         href: '/meet?tab=likes',
+        groupKey: 'meet_like',
       })
       const mutual = db.swipes.some((s) => s.fromId === body.toId && s.toId === meId && s.liked)
       if (!mutual) return
@@ -1241,6 +1448,16 @@ export function runAction(meId, name, body = {}) {
         createdAt: Date.now(),
       })
       db.profileViews = db.profileViews.slice(0, 80)
+      const viewer = findUser(db, meId)
+      notify(db, {
+        type: 'view',
+        actorId: meId,
+        recipientId: body.targetId,
+        text: 'profilini görüntüledi',
+        href: viewer ? `/u/${viewer.username}` : '/',
+        image: viewer?.avatar,
+        groupKey: `view:profile:${meId}`,
+      })
     },
     'feedback.add'() {
       db.feedback.unshift({

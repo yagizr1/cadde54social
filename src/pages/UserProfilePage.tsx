@@ -60,7 +60,7 @@ export function UserProfilePage() {
   if (theyBlocked) {
     return (
       <div className="mx-auto w-full min-w-0 max-w-xl overflow-x-hidden anim-page">
-        <header className="sticky top-0 z-20 flex h-12 items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
+        <header className="safe-topbar sticky top-0 z-20 flex items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
           <BackButton />
         </header>
         <div className="px-6 py-20 text-center">
@@ -73,7 +73,7 @@ export function UserProfilePage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-xl overflow-x-hidden anim-page">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
+      <header className="safe-topbar sticky top-0 z-20 flex items-center gap-1 bg-ink/90 px-1 backdrop-blur-xl">
         <BackButton />
         <h1 className="min-w-0 flex-1 truncate text-[16px] font-semibold">
           <VerifiedName user={target} size={16} />

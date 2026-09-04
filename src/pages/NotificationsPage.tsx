@@ -38,10 +38,16 @@ function sectionOf(ts: number): (typeof SECTIONS)[number] {
   return 'Daha eski'
 }
 
+function extraCount(n: AppNotification): number {
+  const ids = n.actorIds?.length ? n.actorIds : n.actorId ? [n.actorId] : []
+  return Math.max(0, ids.length - 1)
+}
+
 function actionText(n: AppNotification, actor?: User): string {
   let text = n.text.trim()
   if (actor) {
-    text = text.replace(new RegExp(`^@?${actor.username}\\s+`, 'i'), '')
+    const name = actor.username.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    text = text.replace(new RegExp(`^@?${name}\\s+`, 'i'), '')
   }
   return text
 }
@@ -88,14 +94,14 @@ export function NotificationsPage() {
 
   function preview(n: AppNotification): string | undefined {
     if (n.image) return n.image
-    if (n.type === 'like' || n.type === 'comment') return ownThumb
-    if (n.type === 'meet_like' || n.type === 'match') return n.image
+    if (n.type === 'like' || n.type === 'comment' || n.type === 'mention') return ownThumb
+    if (n.type === 'meet_like' || n.type === 'match' || n.type === 'view' || n.type === 'message') return n.image
     return undefined
   }
 
   return (
     <div className="mx-auto max-w-xl anim-page">
-      <header className="sticky top-0 z-30 flex items-center gap-1 border-b border-line/70 bg-ink/80 px-1 py-1.5 backdrop-blur-xl">
+      <header className="safe-head sticky top-0 z-30 flex items-center gap-1 border-b border-line/70 bg-ink/80 px-1 pb-1.5 backdrop-blur-xl">
         {selecting ? null : <BackButton className="lg:hidden" />}
         {selecting ? (
           <h1 className="min-w-0 flex-1 truncate px-2 text-[20px] font-bold">
@@ -134,7 +140,9 @@ export function NotificationsPage() {
       </header>
 
       {items.length === 0 ? (
-        <p className="px-6 py-20 text-center text-sm text-mute">Beğeni, yorum ve takipler burada görünür.</p>
+        <p className="px-6 py-20 text-center text-sm text-mute">
+          Beğeni, yorum, takip, bahsetme, mesaj, hikâye ve görüntülenmeler burada görünür.
+        </p>
       ) : (
         <div className="pb-4">
           {groups.map((group) => (
@@ -142,11 +150,13 @@ export function NotificationsPage() {
               <h2 className="px-4 pt-4 pb-1 text-[16px] font-semibold">{group.label}</h2>
               {group.items.map((n) => {
                 const actor = n.actorId ? userService.getById(n.actorId) : undefined
+                const more = extraCount(n)
                 return (
                   <NotificationRow
                     key={n.id}
                     n={n}
                     actor={actor}
+                    extra={more}
                     user={user}
                     selecting={selecting}
                     checked={selected.includes(n.id)}
@@ -167,6 +177,7 @@ export function NotificationsPage() {
 function NotificationRow({
   n,
   actor,
+  extra,
   user,
   selecting,
   checked,
@@ -176,6 +187,7 @@ function NotificationRow({
 }: {
   n: AppNotification
   actor?: User
+  extra: number
   user: User
   selecting: boolean
   checked: boolean
@@ -226,7 +238,8 @@ function NotificationRow({
               e.stopPropagation()
             }}
           >
-            {actor.username}{' '}
+            {actor.username}
+            {extra ? ` ve ${extra} kişi daha` : ''}{' '}
           </Link>
         ) : null}
         {selecting ? (

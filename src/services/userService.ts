@@ -119,6 +119,7 @@ export const userService = {
           recipientId: targetId,
           text: 'seni takip etmeye başladı',
           href: `/u/${me.username}`,
+          groupKey: `follow:${meId}`,
         })
       }
     }

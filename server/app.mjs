@@ -17,6 +17,7 @@ import {
 } from './logic.mjs'
 import { mailReady, resetCodes, sendResetMail, sixDigit } from './passwordReset.mjs'
 import { clientKey, rateLimit } from './rateLimit.mjs'
+import { dispatchPush, pushPublicKey, removePushSubscription, savePushSubscription } from './push.mjs'
 
 loadEnv()
 
@@ -159,6 +160,28 @@ export function createApiApp() {
       res.json({ ok: true })
     } catch (err) {
       fail(res, err, 'Şifre güncellenemedi')
+    }
+  })
+
+  app.get('/api/push/public-key', (_req, res) => {
+    res.json({ key: pushPublicKey() })
+  })
+
+  app.post('/api/push/subscribe', auth, (req, res) => {
+    try {
+      savePushSubscription(req.user.id, req.body ?? {})
+      res.json({ ok: true })
+    } catch (err) {
+      fail(res, err, 'Bildirim açılamadı')
+    }
+  })
+
+  app.post('/api/push/unsubscribe', auth, (req, res) => {
+    try {
+      removePushSubscription(req.user.id, req.body?.endpoint)
+      res.json({ ok: true })
+    } catch (err) {
+      fail(res, err, 'Bildirim kapatılamadı')
     }
   })
 

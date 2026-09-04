@@ -1,6 +1,7 @@
 import { uid } from '../lib/utils'
 import type { ProfileView } from '../types'
 import { premiumService } from './premiumService'
+import { notificationService } from './notificationService'
 import { settingsService } from './settingsService'
 import { getItem, setItem } from './storage'
 import { sync } from './syncService'
@@ -28,5 +29,14 @@ export const profileViewService = {
     views.unshift(row)
     setItem('profileViews', views.slice(0, 80))
     sync('views.record', { id: row.id, targetId })
+    notificationService.notify({
+      type: 'view',
+      actorId: viewerId,
+      recipientId: targetId,
+      text: 'profilini görüntüledi',
+      href: viewer ? `/u/${viewer.username}` : '/',
+      image: viewer?.avatar,
+      groupKey: `view:profile:${viewerId}`,
+    })
   },
 }

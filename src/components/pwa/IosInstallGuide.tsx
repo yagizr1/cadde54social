@@ -36,7 +36,7 @@ export function IosInstallGuide({
       <button type="button" className="absolute inset-0 bg-black/75" onClick={onClose} aria-label="Kapat" />
 
       <div
-        className={`absolute inset-x-0 top-0 flex justify-center overflow-y-auto px-4 pt-[max(12px,env(safe-area-inset-top))] ${
+        className={`absolute inset-x-0 top-0 flex justify-center overflow-y-auto px-4 pt-[calc(env(safe-area-inset-top)+12px)] ${
           inApp ? 'bottom-0 pb-[max(12px,env(safe-area-inset-bottom))]' : 'bottom-16'
         }`}
       >

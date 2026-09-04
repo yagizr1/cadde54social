@@ -84,7 +84,7 @@ export function AdminLayout() {
           />
         ) : null}
         <div className="min-w-0 flex-1">
-          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b border-white/10 bg-ink/90 px-4 backdrop-blur lg:hidden">
+          <header className="safe-topbar-14 sticky top-0 z-20 flex items-center gap-3 border-b border-white/10 bg-ink/90 px-4 backdrop-blur lg:hidden">
             <button type="button" onClick={() => setOpen(true)} aria-label="Menü">
               <Menu className="h-5 w-5" />
             </button>

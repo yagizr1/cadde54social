@@ -37,6 +37,7 @@ export const mentionService = {
         text: opts.label,
         href: opts.href ?? `/u/${actor.username}`,
         image: opts.image,
+        groupKey: `mention:${opts.href ?? actor.username}:${actorId}`,
       })
     }
   },

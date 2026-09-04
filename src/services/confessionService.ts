@@ -38,15 +38,38 @@ export const confessionService = {
     return item
   },
 
-  comment(id: string, userId: string, text: string): Confession | undefined {
+  comment(id: string, userId: string, text: string, parentId?: string): Confession | undefined {
     const list = all()
     const item = list.find((c) => c.id === id)
     if (!item) return undefined
-    const comment: Comment = { id: uid('c'), userId, text, createdAt: Date.now() }
+    const replyTo = parentId ? item.comments.find((c) => c.id === parentId) : undefined
+    const rootId = replyTo?.parentId ?? replyTo?.id
+    const comment: Comment = {
+      id: uid('c'),
+      userId,
+      text,
+      createdAt: Date.now(),
+      parentId: rootId,
+      likes: [],
+    }
     item.comments = [...item.comments, comment]
     setItem('confessions', list)
-    sync('confessions.comment', { id, text, commentId: comment.id })
+    sync('confessions.comment', { id, text, commentId: comment.id, parentId: rootId })
     challengeService.track(userId, 'confession_comment')
+    return item
+  },
+
+  toggleCommentLike(id: string, commentId: string, userId: string): Confession | undefined {
+    const list = all()
+    const item = list.find((c) => c.id === id)
+    if (!item) return undefined
+    const row = item.comments.find((c) => c.id === commentId)
+    if (!row) return undefined
+    const likes = row.likes ?? []
+    const liked = likes.includes(userId)
+    row.likes = liked ? likes.filter((x) => x !== userId) : [...likes, userId]
+    setItem('confessions', list)
+    sync('confessions.commentLike', { id, commentId })
     return item
   },
 

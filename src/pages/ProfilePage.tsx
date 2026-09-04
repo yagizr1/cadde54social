@@ -33,7 +33,7 @@ export function ProfilePage() {
 
   return (
     <div className="mx-auto w-full min-w-0 max-w-xl overflow-x-hidden anim-page">
-      <header className="sticky top-0 z-20 flex h-12 items-center gap-2 bg-ink/90 px-3 backdrop-blur-xl">
+      <header className="safe-topbar sticky top-0 z-20 flex items-center gap-2 bg-ink/90 px-3 backdrop-blur-xl">
         <button
           type="button"
           onClick={() => setAccountSwitcher(true)}

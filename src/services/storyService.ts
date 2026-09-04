@@ -2,8 +2,10 @@ import { STORY_TTL_MS } from '../lib/constants'
 import { uid } from '../lib/utils'
 import type { Story } from '../types'
 import { challengeService } from './challengeService'
+import { notificationService } from './notificationService'
 import { getItem, setItem } from './storage'
 import { sync } from './syncService'
+import { userService } from './userService'
 import { xpService } from './xpService'
 
 function normalize(story: Story): Story {
@@ -83,6 +85,16 @@ export const storyService = {
     story.viewedBy = [...story.viewedBy, userId]
     save(stories)
     sync('stories.view', { storyId })
+    const viewer = userService.getById(userId)
+    notificationService.notify({
+      type: 'view',
+      actorId: userId,
+      recipientId: story.userId,
+      text: 'hikayeni görüntüledi',
+      href: viewer ? `/u/${viewer.username}` : '/',
+      image: story.image,
+      groupKey: `view:story:${userId}`,
+    })
   },
 
   toggleLike(storyId: string, userId: string): Story | undefined {

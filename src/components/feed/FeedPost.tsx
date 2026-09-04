@@ -15,6 +15,7 @@ import { EditPostPanel } from './EditPostPanel'
 import { OwnPostSheet } from './OwnPostSheet'
 import { Avatar } from '../ui/Avatar'
 import { CommentSheet } from '../ui/CommentSheet'
+import { LikersSheet } from '../ui/LikersSheet'
 import { MentionText } from '../ui/MentionText'
 import { LikeButton } from '../ui/LikeButton'
 import { QuickShareButton } from '../ui/QuickShareButton'
@@ -41,6 +42,7 @@ export function FeedPost({
   const lastTap = useRef(0)
   const popTimer = useRef(0)
   const [commentsOpen, setCommentsOpen] = useState(false)
+  const [likersOpen, setLikersOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [editOpen, setEditOpen] = useState(false)
@@ -57,6 +59,7 @@ export function FeedPost({
 
   if (!user) return null
   const visibleComments = postService.visibleComments(post.comments, meId, post.userId)
+  const likesHidden = (post.hideLikes || settingsService.get(post.userId).hideLikes) && meId !== post.userId
 
   function pulse(ms = 350) {
     setPop(true)
@@ -148,34 +151,48 @@ export function FeedPost({
           </span>
         ) : null}
       </button>
-      <div className="flex items-center justify-between px-1 pt-1">
-        <div className="flex items-center">
-          <LikeButton
-            liked={liked}
-            pop={pop}
-            onClick={() => {
-              postService.toggleLike(post.id, meId, post.userId)
-              if (!liked) pulse()
-              onChange()
-            }}
-          />
-          <button
-            className="grid h-11 w-11 place-items-center"
-            onClick={() => {
-              if (post.commentsOff && meId !== post.userId) {
-                toast('Yorumlar kapalı', 'err')
-                return
-              }
-              const gate = settingsService.canComment(meId, post.userId)
-              if (meId !== post.userId && !gate.ok) {
-                toast(gate.reason ?? 'Yorum yapılamaz', 'err')
-                return
-              }
-              setCommentsOpen(true)
-            }}
-          >
-            <MessageCircle className="h-6 w-6" />
-          </button>
+      <div className="flex items-start justify-between px-1 pt-1">
+        <div className="flex items-start">
+          <div className="flex w-11 flex-col items-center">
+            <LikeButton
+              liked={liked}
+              pop={pop}
+              onClick={() => {
+                postService.toggleLike(post.id, meId, post.userId)
+                if (!liked) pulse()
+                onChange()
+              }}
+            />
+            {likesHidden ? null : (
+              <button
+                type="button"
+                className="pb-1 text-[11px] font-semibold leading-none"
+                onClick={() => setLikersOpen(true)}
+              >
+                {formatCount(post.likes.length)}
+              </button>
+            )}
+          </div>
+          <div className="flex w-11 flex-col items-center">
+            <button
+              className="grid h-11 w-11 place-items-center"
+              onClick={() => {
+                if (post.commentsOff && meId !== post.userId) {
+                  toast('Yorumlar kapalı', 'err')
+                  return
+                }
+                const gate = settingsService.canComment(meId, post.userId)
+                if (meId !== post.userId && !gate.ok) {
+                  toast(gate.reason ?? 'Yorum yapılamaz', 'err')
+                  return
+                }
+                setCommentsOpen(true)
+              }}
+            >
+              <MessageCircle className="h-6 w-6" />
+            </button>
+            <span className="pb-1 text-[11px] font-semibold leading-none">{formatCount(visibleComments.length)}</span>
+          </div>
           <QuickShareButton
             meId={meId}
             onOpenSheet={() => setShareOpen(true)}
@@ -214,11 +231,13 @@ export function FeedPost({
         </button>
       </div>
       <div className="px-3">
-        <p className="text-[14px] font-semibold">
-          {(post.hideLikes || settingsService.get(post.userId).hideLikes) && meId !== post.userId
-            ? 'Beğeniler gizli'
-            : `${formatCount(post.likes.length)} beğeni`}
-        </p>
+        {likesHidden ? (
+          <p className="text-[14px] font-semibold">Beğeniler gizli</p>
+        ) : (
+          <button type="button" className="text-[14px] font-semibold" onClick={() => setLikersOpen(true)}>
+            {formatCount(post.likes.length)} beğeni
+          </button>
+        )}
         {post.caption ? (
           <p className="mt-1 text-[14px] leading-snug">
             <Link to={`/u/${user.username}`} className="font-semibold">
@@ -244,8 +263,12 @@ export function FeedPost({
         mentionHref={`/p/${post.id}`}
         mentionImage={post.image}
         commentsOff={post.commentsOff}
-        onSend={(text) => {
-          postService.comment(post.id, meId, text, post.userId)
+        onSend={(text, parentId) => {
+          postService.comment(post.id, meId, text, post.userId, parentId)
+          onChange()
+        }}
+        onLike={(commentId) => {
+          postService.toggleCommentLike(post.id, commentId, meId)
           onChange()
         }}
         onApprove={(commentId) => {
@@ -253,6 +276,7 @@ export function FeedPost({
           onChange()
         }}
       />
+      <LikersSheet open={likersOpen} onClose={() => setLikersOpen(false)} userIds={post.likes} />
       <ShareSheet
         open={shareOpen}
         onClose={() => setShareOpen(false)}

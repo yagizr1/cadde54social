@@ -92,6 +92,12 @@ export const authService = {
 
   async logout(): Promise<void> {
     if (getToken()) {
+      try {
+        const { disablePush } = await import('../lib/webPush')
+        await disablePush()
+      } catch {
+        /* ignore */
+      }
       await api('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
     }
     setToken(null)

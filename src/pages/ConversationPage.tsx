@@ -6,6 +6,7 @@ import { Link, useNavigate } from '../lib/nav'
 import { ChatCamera } from '../components/chat/ChatCamera'
 import { MessageBubble } from '../components/chat/MessageBubble'
 import { MessageMenu } from '../components/chat/MessageMenu'
+import { ViewOnceViewer } from '../components/chat/ViewOnceViewer'
 import { UserActionsSheet } from '../components/profile/UserActionsSheet'
 import { Avatar } from '../components/ui/Avatar'
 import { ShareSheet } from '../components/ui/ShareSheet'
@@ -55,6 +56,7 @@ function previewOf(m: ChatMessage): string {
   if (share?.kind === 'story') return 'Story'
   if (share?.kind === 'reel') return 'Reels'
   if (share?.kind === 'profile') return 'Profil'
+  if (m.viewOnce) return 'Fotoğraf'
   return visibleText(m) || (m.image ? 'Fotoğraf' : m.video ? 'Video' : 'Mesaj')
 }
 
@@ -71,6 +73,7 @@ export function ConversationPage() {
   const [forward, setForward] = useState<SharePayload | null>(null)
   const [camOpen, setCamOpen] = useState(false)
   const [photo, setPhoto] = useState<string | null>(null)
+  const [onceMsg, setOnceMsg] = useState<ChatMessage | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const camRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
@@ -144,14 +147,23 @@ export function ConversationPage() {
   const active = messages.find((m) => m.id === activeId)
   const typing = text.trim().length > 0
 
-  async function send(next = text, image?: string) {
+  async function send(next = text, image?: string, viewOnce?: boolean) {
     if (blocked) {
       toast('Bu kullanıcıyla mesajlaşamazsın', 'err')
       return
     }
     const body = next.trim()
     if (!body && !image) return
-    messageService.send(conversation.id, meId, body || (image ? 'Fotoğraf' : ''), image, undefined, undefined, replyTo ?? undefined)
+    messageService.send(
+      conversation.id,
+      meId,
+      body || (image ? 'Fotoğraf' : ''),
+      image,
+      undefined,
+      undefined,
+      replyTo ?? undefined,
+      viewOnce,
+    )
     setText('')
     setEmojiOpen(false)
     setReplyTo(null)
@@ -175,7 +187,7 @@ export function ConversationPage() {
 
   return (
     <div className="flex h-dvh flex-col bg-black">
-      <header className="flex h-14 shrink-0 items-center gap-1 px-1 pt-[env(safe-area-inset-top)]">
+      <header className="safe-topbar-14 flex shrink-0 items-center gap-1 px-1">
         <button
           type="button"
           onClick={() => navigate('/messages', { replace: true })}
@@ -297,7 +309,23 @@ export function ConversationPage() {
                               refresh()
                             }
                       }
-                      onOpenPhoto={m.image ? () => setPhoto(m.image!) : undefined}
+                      meId={user.id}
+                      onOpenPhoto={
+                        m.image
+                          ? () => {
+                              if (m.viewOnce) {
+                                if (!messageService.canOpenOnce(m, user.id)) return
+                                if (m.senderId !== user.id) {
+                                  messageService.openOnce(conv.id, m.id, user.id)
+                                  refresh()
+                                }
+                                setOnceMsg(m)
+                                return
+                              }
+                              setPhoto(m.image!)
+                            }
+                          : undefined
+                      }
                     />
                   </div>
                   <span
@@ -415,7 +443,9 @@ export function ConversationPage() {
               onChange={async (e) => {
                 const file = e.target.files?.[0]
                 e.target.value = ''
-                await onPick(file)
+                if (!file) return
+                const img = await uploadImageFile(file, 1200)
+                await send('Fotoğraf', img, true)
               }}
             />
           </>
@@ -423,8 +453,11 @@ export function ConversationPage() {
       </div>
       {camOpen ? (
         <ChatCamera
-          onCapture={(file) => {
-            void onPick(file)
+          onCapture={(file, opts) => {
+            void (async () => {
+              const img = await uploadImageFile(file, 1200)
+              await send(opts.caption || 'Fotoğraf', img, opts.viewOnce)
+            })()
           }}
           onClose={() => setCamOpen(false)}
           onFallback={() => camRef.current?.click()}
@@ -433,7 +466,10 @@ export function ConversationPage() {
       {active ? (
         <MessageMenu
           mine={active.senderId === user.id}
-          canCopy={Boolean(visibleText(active) || parseShare(active)?.reply || parseShare(active)?.note)}
+          canCopy={Boolean(
+            !active.viewOnce && (visibleText(active) || parseShare(active)?.reply || parseShare(active)?.note),
+          )}
+          canForward={!active.viewOnce}
           onClose={() => setActiveId(null)}
           canInteract={!blocked}
           onReact={(emoji) => {
@@ -467,6 +503,13 @@ export function ConversationPage() {
         />
       ) : null}
       <ShareSheet open={Boolean(forward)} onClose={() => setForward(null)} payload={forward ?? { text: '' }} />
+      {onceMsg?.image ? (
+        <ViewOnceViewer
+          src={onceMsg.image}
+          caption={onceMsg.text && onceMsg.text !== 'Fotoğraf' ? onceMsg.text : undefined}
+          onClose={() => setOnceMsg(null)}
+        />
+      ) : null}
       {photo
         ? createPortal(
             <button
@@ -476,7 +519,7 @@ export function ConversationPage() {
               aria-label="Kapat"
             >
               <img src={photo} alt="" className="h-full w-full object-contain" />
-              <span className="absolute top-[max(0.75rem,env(safe-area-inset-top))] right-3 grid h-10 w-10 place-items-center rounded-full bg-black/50">
+              <span className="absolute top-[calc(env(safe-area-inset-top)+0.75rem)] right-3 grid h-10 w-10 place-items-center rounded-full bg-black/50">
                 <X className="h-6 w-6" />
               </span>
             </button>,

@@ -72,7 +72,7 @@ export function ProfileGrid({
       {openId
         ? createPortal(
             <div className="fixed inset-0 z-[80] flex flex-col bg-ink">
-              <div className="flex h-12 shrink-0 items-center gap-2 border-b border-line px-2">
+              <div className="safe-topbar flex shrink-0 items-center gap-2 border-b border-line px-2">
                 <button
                   type="button"
                   onClick={() => setOpenId(null)}

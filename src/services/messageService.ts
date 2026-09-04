@@ -18,6 +18,18 @@ export const messageService = {
       .sort((a, b) => b.updatedAt - a.updatedAt)
   },
 
+  unread(conv: Conversation, userId: string): boolean {
+    const other = conv.participantIds.find((id) => id !== userId)
+    if (!other || settingsService.isBlocked(userId, other)) return false
+    const last = [...conv.messages].reverse().find((m) => !m.system)
+    if (!last || last.senderId === userId) return false
+    return (conv.lastRead?.[userId] ?? 0) < last.createdAt
+  },
+
+  unreadCount(userId: string): number {
+    return this.list(userId).filter((c) => this.unread(c, userId)).length
+  },
+
   get(id: string): Conversation | undefined {
     return all().find((c) => c.id === id)
   },
@@ -49,6 +61,7 @@ export const messageService = {
     video?: string,
     share?: ChatShare,
     replyTo?: ChatReplyTo,
+    viewOnce?: boolean,
   ): Conversation | undefined {
     const list = all()
     const conv = list.find((c) => c.id === conversationId)
@@ -65,6 +78,8 @@ export const messageService = {
       replyTo,
       reactions: [],
       createdAt: Date.now(),
+      viewOnce: viewOnce || undefined,
+      openedBy: [],
     }
     conv.messages = [...conv.messages, msg]
     conv.updatedAt = Date.now()
@@ -78,6 +93,7 @@ export const messageService = {
       video,
       share,
       replyTo,
+      viewOnce: Boolean(viewOnce),
     })
     if (other) {
       challengeService.track(senderId, 'interact_users', other)
@@ -89,7 +105,7 @@ export const messageService = {
         text: 'sana bir mesaj gönderdi',
         href: `/messages/${conversationId}`,
         image: sender?.avatar,
-        persist: true,
+        groupKey: `message:${conversationId}`,
       })
     }
     return conv
@@ -168,5 +184,32 @@ export const messageService = {
     const lastMine = [...conv.messages].reverse().find((m) => m.senderId === meId)
     if (!lastMine) return false
     return (conv.lastRead?.[otherId] ?? 0) >= lastMine.createdAt
+  },
+
+  onceOpenedBy(message: ChatMessage, userId: string): boolean {
+    return (message.openedBy ?? []).includes(userId)
+  },
+
+  onceSeenByOther(message: ChatMessage): boolean {
+    return (message.openedBy ?? []).some((id) => id !== message.senderId)
+  },
+
+  canOpenOnce(message: ChatMessage, userId: string): boolean {
+    if (!message.viewOnce || !message.image) return false
+    if (userId === message.senderId) return !this.onceSeenByOther(message)
+    return !this.onceOpenedBy(message, userId)
+  },
+
+  openOnce(conversationId: string, messageId: string, userId: string): void {
+    const list = all()
+    const conv = list.find((c) => c.id === conversationId)
+    if (!conv) return
+    const msg = conv.messages.find((m) => m.id === messageId)
+    if (!msg?.viewOnce) return
+    const opened = msg.openedBy ?? []
+    if (opened.includes(userId)) return
+    msg.openedBy = [...opened, userId]
+    setItem('conversations', list)
+    sync('messages.openOnce', { conversationId, messageId })
   },
 }

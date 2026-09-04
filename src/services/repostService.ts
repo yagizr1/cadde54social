@@ -77,6 +77,7 @@ export const repostService = {
         text: kind === 'reel' ? 'reels’ini tekrar paylaştı' : 'gönderini tekrar paylaştı',
         href: me ? `/u/${me.username}` : '/',
         image: kind === 'post' ? postService.list().find((p) => p.id === targetId)?.image : undefined,
+        groupKey: `repost:${kind}:${targetId}`,
       })
     }
     return true

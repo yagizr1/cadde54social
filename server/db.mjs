@@ -36,6 +36,7 @@ const empty = () => ({
   hereSessions: [],
   commentCount: 0,
   completedChallengeCount: 0,
+  pushSubscriptions: [],
 })
 
 function ensureDirs() {

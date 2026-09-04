@@ -19,11 +19,13 @@ import {
 } from 'lucide-react'
 import { NavLink } from '../../lib/nav'
 import { cx } from '../../lib/utils'
-import { BrandMark } from './BrandMark'
+import { messageService } from '../../services/messageService'
 import { notificationService } from '../../services/notificationService'
 import { useAuthStore } from '../../store/authStore'
 import { useUiStore } from '../../store/uiStore'
 import { Avatar } from '../ui/Avatar'
+import { CountBadge } from '../ui/CountBadge'
+import { BrandMark } from './BrandMark'
 
 const links = [
   { to: '/premium', label: 'Premium', icon: Sparkles },
@@ -50,6 +52,7 @@ export function Sidebar() {
   const setAccountSwitcher = useUiStore((s) => s.setAccountSwitcher)
   if (!user) return null
   const unread = notificationService.unreadCount(user.id)
+  const msgUnread = messageService.unreadCount(user.id)
 
   return (
     <aside className="sticky top-0 hidden h-dvh w-[260px] shrink-0 flex-col border-r border-line bg-ink-2/80 px-4 py-5 lg:flex">
@@ -74,6 +77,7 @@ export function Sidebar() {
               {l.to === '/notifications' && unread > 0 ? (
                 <span className="ml-auto rounded-full bg-hot px-2 text-[11px] font-bold text-white">{unread}</span>
               ) : null}
+              {l.to === '/messages' ? <CountBadge count={msgUnread} ring={false} className="ml-auto" /> : null}
             </NavLink>
           )
         })}

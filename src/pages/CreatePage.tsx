@@ -312,7 +312,7 @@ export function CreatePage() {
       <div className="mx-auto flex h-dvh w-full max-w-lg flex-col bg-black">
         {step === 'gallery' ? (
           <>
-            <header className="grid h-12 shrink-0 grid-cols-[48px_1fr_72px] items-center px-1">
+            <header className="safe-topbar grid shrink-0 grid-cols-[48px_1fr_72px] items-center px-1">
               <button type="button" onClick={close} className="grid h-12 w-12 place-items-center" aria-label="Kapat">
                 <X className="h-7 w-7" />
               </button>
@@ -470,7 +470,7 @@ export function CreatePage() {
           </>
         ) : (
           <>
-            <header className="grid h-12 shrink-0 grid-cols-[48px_1fr_80px] items-center px-1">
+            <header className="safe-topbar grid shrink-0 grid-cols-[48px_1fr_80px] items-center px-1">
               <button type="button" onClick={() => setStep('gallery')} className="grid h-12 w-12 place-items-center" aria-label="Geri">
                 <ChevronLeft className="h-7 w-7" />
               </button>
@@ -725,7 +725,7 @@ function PickerSheet({
 }) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-black">
-      <header className="grid h-12 shrink-0 grid-cols-[48px_1fr_48px] items-center">
+      <header className="safe-topbar grid shrink-0 grid-cols-[48px_1fr_48px] items-center">
         <button type="button" onClick={onClose} className="grid h-12 w-12 place-items-center" aria-label="Geri">
           <ChevronLeft className="h-6 w-6" />
         </button>

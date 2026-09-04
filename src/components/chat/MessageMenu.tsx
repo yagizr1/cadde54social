@@ -6,6 +6,7 @@ export const REACT_EMOJIS = ['❤️', '😂', '😮', '😢', '🔥', '👍']
 export function MessageMenu({
   mine,
   canCopy,
+  canForward = true,
   canInteract = true,
   onReact,
   onReply,
@@ -16,6 +17,7 @@ export function MessageMenu({
 }: {
   mine: boolean
   canCopy: boolean
+  canForward?: boolean
   canInteract?: boolean
   onReact: (emoji: string) => void
   onReply: () => void
@@ -44,7 +46,7 @@ export function MessageMenu({
         ) : null}
         <div className="overflow-hidden rounded-[14px] bg-[#2a2a2a] shadow-2xl">
           {canInteract ? <MenuItem icon={CornerUpLeft} label="Yanıtla" onClick={onReply} /> : null}
-          <MenuItem icon={Forward} label="İlet" onClick={onForward} />
+          {canForward ? <MenuItem icon={Forward} label="İlet" onClick={onForward} /> : null}
           {canCopy ? <MenuItem icon={Copy} label="Kopyala" onClick={onCopy} /> : null}
           {mine ? <MenuItem icon={Trash2} label="Geri al" danger onClick={onUnsend} /> : null}
         </div>

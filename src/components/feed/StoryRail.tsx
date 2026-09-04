@@ -41,6 +41,7 @@ export function StoryRail({ meId }: { meId: string }) {
               name={me?.name ?? 'Sen'}
               size={64}
               ring={hasMine ? (mySeen ? 'story-seen' : 'story') : 'none'}
+              peek={false}
             />
           </button>
           <button
@@ -70,6 +71,7 @@ export function StoryRail({ meId }: { meId: string }) {
               size={64}
               ring={seen ? 'story-seen' : 'story'}
               className="mx-auto"
+              peek={false}
             />
             <p className="mt-1.5 truncate text-[11px]">{u.username}</p>
           </button>

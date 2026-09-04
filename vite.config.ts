@@ -86,6 +86,7 @@ export default defineConfig({
         ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/uploads\//],
+        importScripts: ['/push-handler.js'],
       },
     }),
   ],

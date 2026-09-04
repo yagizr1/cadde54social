@@ -100,6 +100,7 @@ export const postService = {
         text: 'gönderini beğendi',
         href: `/p/${post.id}`,
         image: post.image,
+        groupKey: `like:post:${post.id}`,
       })
     }
     return post
@@ -116,17 +117,29 @@ export const postService = {
     return post
   },
 
-  comment(postId: string, userId: string, text: string, authorId?: string): Post | undefined {
+  comment(postId: string, userId: string, text: string, authorId?: string, parentId?: string): Post | undefined {
     const posts = all()
     const post = posts.find((p) => p.id === postId)
     if (!post) return undefined
     if (post.commentsOff && userId !== post.userId) return post
     if (userId !== post.userId && !settingsService.canComment(userId, post.userId).ok) return post
     const hidden = settingsService.hasHiddenWord(post.userId, text)
-    const comment: Comment = { id: uid('c'), userId, text, createdAt: Date.now(), hidden: hidden || undefined }
+    const replyTo = parentId
+      ? post.comments.find((c) => c.id === parentId)
+      : undefined
+    const rootId = replyTo?.parentId ?? replyTo?.id
+    const comment: Comment = {
+      id: uid('c'),
+      userId,
+      text,
+      createdAt: Date.now(),
+      hidden: hidden || undefined,
+      parentId: rootId,
+      likes: [],
+    }
     post.comments = [...post.comments, comment]
     save(posts)
-    sync('posts.comment', { postId, text, commentId: comment.id, hidden })
+    sync('posts.comment', { postId, text, commentId: comment.id, hidden, parentId: rootId })
     challengeService.track(userId, 'comment')
     if (authorId && authorId !== userId) challengeService.track(userId, 'interact_users', authorId)
     const count = getItem('commentCount', 0) + 1
@@ -139,7 +152,44 @@ export const postService = {
       text: `yorum yaptı: ${text.slice(0, 80)}`,
       href: `/p/${post.id}`,
       image: post.image,
+      groupKey: `comment:post:${post.id}:${userId}`,
     })
+    if (replyTo && replyTo.userId !== userId && replyTo.userId !== post.userId) {
+      notificationService.notify({
+        type: 'comment',
+        actorId: userId,
+        recipientId: replyTo.userId,
+        text: `yorumuna yanıt verdi: ${text.slice(0, 80)}`,
+        href: `/p/${post.id}`,
+        image: post.image,
+        groupKey: `comment:reply:${replyTo.id}:${userId}`,
+      })
+    }
+    return post
+  },
+
+  toggleCommentLike(postId: string, commentId: string, userId: string): Post | undefined {
+    const posts = all()
+    const post = posts.find((p) => p.id === postId)
+    if (!post) return undefined
+    const row = post.comments.find((c) => c.id === commentId)
+    if (!row) return undefined
+    const likes = row.likes ?? []
+    const liked = likes.includes(userId)
+    row.likes = liked ? likes.filter((id) => id !== userId) : [...likes, userId]
+    save(posts)
+    sync('posts.commentLike', { postId, commentId })
+    if (!liked) {
+      notificationService.notify({
+        type: 'like',
+        actorId: userId,
+        recipientId: row.userId,
+        text: 'yorumunu beğendi',
+        href: `/p/${post.id}`,
+        image: post.image,
+        groupKey: `like:comment:${commentId}`,
+      })
+    }
     return post
   },
 

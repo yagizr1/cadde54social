@@ -63,7 +63,6 @@ function notifyMatch(meId: string, otherId: string): void {
     text: 'ile eşleştiniz.',
     href: '/meet?tab=matches',
     image: other.avatar,
-    persist: true,
   })
   notificationService.notify({
     type: 'match',
@@ -72,7 +71,6 @@ function notifyMatch(meId: string, otherId: string): void {
     text: 'ile eşleştiniz.',
     href: '/meet?tab=matches',
     image: me.avatar,
-    persist: true,
   })
 }
 
@@ -181,7 +179,7 @@ export const meetService = {
       recipientId: toId,
       text: 'Yeni bir beğeni! Birisi seni beğendi.',
       href: '/meet?tab=likes',
-      persist: true,
+      groupKey: 'meet_like',
     })
 
     const mutual = swipes().some((s) => s.fromId === toId && s.toId === meId && s.liked)

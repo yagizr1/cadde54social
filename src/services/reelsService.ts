@@ -2,6 +2,7 @@ import { api } from '../lib/api'
 import { uid } from '../lib/utils'
 import type { Comment, Reel } from '../types'
 import { settingsService } from './settingsService'
+import { notificationService } from './notificationService'
 import { getBlobUrl, getItem, saveBlob, setItem } from './storage'
 import { sync } from './syncService'
 import { xpService } from './xpService'
@@ -69,6 +70,16 @@ export const reelsService = {
     reel.likes = liked ? reel.likes.filter((x) => x !== userId) : [...reel.likes, userId]
     save(reels)
     sync('reels.like', { reelId: id })
+    if (!liked) {
+      notificationService.notify({
+        type: 'like',
+        actorId: userId,
+        recipientId: reel.userId,
+        text: 'Reels’ini beğendi',
+        href: `/reels/${reel.id}`,
+        groupKey: `like:reel:${reel.id}`,
+      })
+    }
     return reel
   },
 
@@ -83,16 +94,68 @@ export const reelsService = {
     return reel
   },
 
-  comment(id: string, userId: string, text: string): Reel | undefined {
+  comment(id: string, userId: string, text: string, parentId?: string): Reel | undefined {
     const reels = all()
     const reel = reels.find((r) => r.id === id)
     if (!reel) return undefined
     if (userId !== reel.userId && !settingsService.canComment(userId, reel.userId).ok) return reel
     const hidden = settingsService.hasHiddenWord(reel.userId, text)
-    const comment: Comment = { id: uid('c'), userId, text, createdAt: Date.now(), hidden: hidden || undefined }
+    const replyTo = parentId ? reel.comments.find((c) => c.id === parentId) : undefined
+    const rootId = replyTo?.parentId ?? replyTo?.id
+    const comment: Comment = {
+      id: uid('c'),
+      userId,
+      text,
+      createdAt: Date.now(),
+      hidden: hidden || undefined,
+      parentId: rootId,
+      likes: [],
+    }
     reel.comments = [...reel.comments, comment]
     save(reels)
-    sync('reels.comment', { reelId: id, text, commentId: comment.id, hidden })
+    sync('reels.comment', { reelId: id, text, commentId: comment.id, hidden, parentId: rootId })
+    notificationService.notify({
+      type: 'comment',
+      actorId: userId,
+      recipientId: reel.userId,
+      text: `yorum yaptı: ${text.slice(0, 80)}`,
+      href: `/reels/${reel.id}`,
+      groupKey: `comment:reel:${reel.id}:${userId}`,
+    })
+    if (replyTo && replyTo.userId !== userId && replyTo.userId !== reel.userId) {
+      notificationService.notify({
+        type: 'comment',
+        actorId: userId,
+        recipientId: replyTo.userId,
+        text: `yorumuna yanıt verdi: ${text.slice(0, 80)}`,
+        href: `/reels/${reel.id}`,
+        groupKey: `comment:reply:${replyTo.id}:${userId}`,
+      })
+    }
+    return reel
+  },
+
+  toggleCommentLike(reelId: string, commentId: string, userId: string): Reel | undefined {
+    const reels = all()
+    const reel = reels.find((r) => r.id === reelId)
+    if (!reel) return undefined
+    const row = reel.comments.find((c) => c.id === commentId)
+    if (!row) return undefined
+    const likes = row.likes ?? []
+    const liked = likes.includes(userId)
+    row.likes = liked ? likes.filter((id) => id !== userId) : [...likes, userId]
+    save(reels)
+    sync('reels.commentLike', { reelId, commentId })
+    if (!liked) {
+      notificationService.notify({
+        type: 'like',
+        actorId: userId,
+        recipientId: row.userId,
+        text: 'yorumunu beğendi',
+        href: `/reels/${reel.id}`,
+        groupKey: `like:comment:${commentId}`,
+      })
+    }
     return reel
   },
 

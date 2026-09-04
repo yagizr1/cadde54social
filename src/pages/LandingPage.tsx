@@ -87,7 +87,7 @@ export function LandingPage() {
 
   return (
     <div className="min-h-dvh bg-ink text-white">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-ink/90 backdrop-blur-xl">
+      <header className="safe-t sticky top-0 z-20 border-b border-white/10 bg-ink/90 backdrop-blur-xl">
         <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
           <a href="#top" className="font-display text-[15px] font-bold tracking-tight">
             <BrandLabel />

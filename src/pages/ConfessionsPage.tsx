@@ -62,9 +62,14 @@ export function ConfessionsPage() {
         open={Boolean(active)}
         onClose={() => setOpenId(null)}
         comments={active?.comments ?? []}
-        onSend={(t) => {
+        onSend={(t, parentId) => {
           if (!active) return
-          confessionService.comment(active.id, user.id, t)
+          confessionService.comment(active.id, user.id, t, parentId)
+          refresh()
+        }}
+        onLike={(commentId) => {
+          if (!active) return
+          confessionService.toggleCommentLike(active.id, commentId, user.id)
           refresh()
         }}
       />

@@ -24,6 +24,7 @@ import { Avatar } from '../components/ui/Avatar'
 import { Button } from '../components/ui/Button'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useApp } from '../hooks/useApp'
+import { useWebPush } from '../hooks/useWebPush'
 import { MIN_AGE } from '../lib/constants'
 import { timeAgo } from '../lib/utils'
 import { authService } from '../services/authService'
@@ -550,6 +551,7 @@ function BlockedSection() {
 function NotificationsSection() {
   const { user, refresh } = useApp()
   const toast = useUiStore((s) => s.toast)
+  const push = useWebPush()
   if (!user) return null
   const settings = settingsService.get(user.id)
 
@@ -561,6 +563,31 @@ function NotificationsSection() {
 
   return (
     <Shell title="Bildirimler">
+      <div className="mb-3 rounded-3xl border border-line bg-panel p-4">
+        <p className="font-semibold">Telefon bildirimleri</p>
+        <p className="mt-1 text-xs text-mute">
+          {push.needsInstall
+            ? 'iPhone’da Safari’den Paylaş → Ana Ekrana Ekle deyip uygulamadan aç. Sonra burada izin ver.'
+            : push.granted
+              ? 'Açık. Mesaj, beğeni, yorum ve takip telefona düşer.'
+              : push.denied
+                ? 'Kapalı. Telefonun bildirim ayarlarından Cadde54 Social’a izin ver.'
+                : 'Mesaj, beğeni, yorum ve takipler kilit ekranına düşsün.'}
+        </p>
+        {push.error ? <p className="mt-2 text-xs text-red-400">{push.error}</p> : null}
+        {push.needsInstall || push.denied ? null : (
+          <button
+            type="button"
+            disabled={push.busy}
+            onClick={() => {
+              void push.enable().then(() => toast('Telefon bildirimleri açıldı')).catch(() => undefined)
+            }}
+            className={`mt-3 h-10 rounded-xl px-4 text-sm font-semibold ${push.granted ? 'bg-[#262626]' : 'bg-hot text-ink'}`}
+          >
+            {push.busy ? '...' : push.granted ? 'Açık' : 'Bildirimleri aç'}
+          </button>
+        )}
+      </div>
       <div className="space-y-4 rounded-3xl border border-line bg-panel p-4">
         <Row title="Tümünü duraklat" text="Açıkken beğeni, yorum ve takip bildirimleri gelmez." on={settings.notifyPaused} onChange={(v) => set('notifyPaused', v)} />
         <Row title="Beğeniler" text="Gönderin beğenilince haber ver." on={settings.notifyLikes} onChange={(v) => set('notifyLikes', v)} />
@@ -741,7 +768,7 @@ function ArchiveSection() {
 
   return (
     <div className="mx-auto max-w-xl anim-page">
-      <header className="sticky top-0 z-20 bg-ink/90 backdrop-blur-xl">
+      <header className="safe-t sticky top-0 z-20 bg-ink/90 backdrop-blur-xl">
         <div className="flex h-12 items-center gap-1 px-1">
           <BackButton to="/settings" />
           <h1 className="min-w-0 flex-1 truncate text-[18px] font-bold">Arşivler</h1>

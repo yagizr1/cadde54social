@@ -75,7 +75,7 @@ export function EditPostPanel({
   return createPortal(
     <div className="fixed inset-0 z-[90] bg-black">
       <div className="mx-auto flex h-dvh w-full max-w-lg flex-col bg-black">
-        <header className="grid h-12 shrink-0 grid-cols-[48px_1fr_64px] items-center border-b border-white/10">
+        <header className="safe-topbar grid shrink-0 grid-cols-[48px_1fr_64px] items-center border-b border-white/10">
           <button type="button" onClick={onClose} className="grid h-12 w-12 place-items-center" aria-label="Kapat">
             <X className="h-6 w-6" />
           </button>
@@ -245,7 +245,7 @@ function SubSheet({
 }) {
   return (
     <div className="absolute inset-0 z-20 flex flex-col bg-black">
-      <header className="grid h-12 shrink-0 grid-cols-[48px_1fr_48px] items-center">
+      <header className="safe-topbar grid shrink-0 grid-cols-[48px_1fr_48px] items-center">
         <button type="button" onClick={onClose} className="grid h-12 w-12 place-items-center" aria-label="Geri">
           <ChevronLeft className="h-6 w-6" />
         </button>

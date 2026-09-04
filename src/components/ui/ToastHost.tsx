@@ -6,7 +6,7 @@ export function ToastHost() {
 
   return (
     <>
-      <div className="pointer-events-none fixed top-4 right-4 z-[210] flex w-[min(92vw,360px)] flex-col gap-2">
+      <div className="pointer-events-none fixed top-[calc(env(safe-area-inset-top)+1rem)] right-4 z-[210] flex w-[min(92vw,360px)] flex-col gap-2">
         {toasts.map((t) => (
           <div
             key={t.id}

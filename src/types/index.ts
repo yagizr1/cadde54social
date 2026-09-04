@@ -47,6 +47,8 @@ export interface Comment {
   text: string
   createdAt: number
   hidden?: boolean
+  parentId?: string
+  likes?: string[]
 }
 
 export interface Post {
@@ -131,6 +133,8 @@ export interface AppNotification {
   id: string
   type: NotificationType
   actorId?: string
+  actorIds?: string[]
+  groupKey?: string
   text: string
   read: boolean
   createdAt: number
@@ -169,6 +173,8 @@ export interface ChatMessage {
   reactions?: ChatReaction[]
   replyTo?: ChatReplyTo
   system?: boolean
+  viewOnce?: boolean
+  openedBy?: string[]
 }
 
 export interface Conversation {

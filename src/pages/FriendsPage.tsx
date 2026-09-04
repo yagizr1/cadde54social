@@ -25,7 +25,7 @@ export function FriendsPage() {
 
   return (
     <div className="mx-auto max-w-xl anim-page">
-      <header className="sticky top-0 z-20 bg-ink/90 backdrop-blur-xl">
+      <header className="safe-t sticky top-0 z-20 bg-ink/90 backdrop-blur-xl">
         <div className="flex h-12 items-center gap-1 px-1">
           <BackButton />
           <h1 className="min-w-0 flex-1 truncate text-[16px] font-semibold">{user.username}</h1>

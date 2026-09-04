@@ -154,7 +154,7 @@ export function DiscoverPage() {
 
   return (
     <div className="mx-auto max-w-2xl anim-page">
-      <div className="sticky top-0 z-20 flex items-center gap-2 bg-ink px-3 py-2 lg:top-0">
+      <div className="safe-head sticky top-0 z-20 flex items-center gap-2 bg-ink px-3 pb-2 lg:top-0">
         {searching ? (
           <button
             type="button"
@@ -279,7 +279,7 @@ export function DiscoverPage() {
 
       {openPost ? (
         <div ref={viewerRef} className="fixed inset-0 z-[70] overflow-y-auto bg-ink">
-          <div className="sticky top-0 z-10 flex h-12 items-center gap-2 border-b border-line bg-ink px-2">
+          <div className="safe-topbar sticky top-0 z-10 flex items-center gap-2 border-b border-line bg-ink px-2">
             <button type="button" onClick={() => setOpenPost(null)} className="grid h-10 w-10 place-items-center" aria-label="Kapat">
               <X className="h-6 w-6" />
             </button>

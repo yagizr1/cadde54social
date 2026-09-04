@@ -2,6 +2,7 @@ import { useRef, useState, type ReactNode } from 'react'
 import { useLongPress } from '../../hooks/useLongPress'
 import { parseShare } from '../../lib/chatShare'
 import { cx } from '../../lib/utils'
+import { messageService } from '../../services/messageService'
 import { userService } from '../../services/userService'
 import type { ChatMessage } from '../../types'
 import { Avatar } from '../ui/Avatar'
@@ -19,6 +20,7 @@ export function MessageBubble({
   onHeart,
   onOpenPhoto,
   ignoreTap,
+  meId,
 }: {
   mine: boolean
   message: ChatMessage
@@ -31,6 +33,7 @@ export function MessageBubble({
   onHeart?: () => void
   onOpenPhoto?: () => void
   ignoreTap?: () => boolean
+  meId?: string
 }) {
   const press = useLongPress(onOpenMenu)
   const { didLongPress, ...pressEvents } = press
@@ -164,6 +167,30 @@ export function MessageBubble({
     )
   }
 
+  if (message.viewOnce && message.image) {
+    const opened = meId
+      ? mine
+        ? messageService.onceSeenByOther(message)
+        : messageService.onceOpenedBy(message, meId)
+      : false
+    return wrap(
+      <button
+        type="button"
+        {...pressEvents}
+        onClick={(e) => {
+          e.stopPropagation()
+          if (didLongPress() || ignoreTap?.()) return
+          if (opened) return
+          onOpenPhoto?.()
+        }}
+        className="relative text-left"
+      >
+        {extras}
+        <ViewOnceTile mine={mine} opened={opened} first={first} last={last} />
+      </button>,
+    )
+  }
+
   return wrap(
     <button
       type="button"
@@ -223,7 +250,59 @@ export function TextBubble({
 }
 
 function visibleText(m: ChatMessage): string {
+  if (m.viewOnce) return ''
   if (m.image && (m.text === 'Fotoğraf' || !m.text.trim())) return ''
   if (m.video && (m.text === 'Video' || !m.text.trim())) return ''
   return m.text
+}
+
+function ViewOnceTile({
+  mine,
+  opened,
+  first,
+  last,
+}: {
+  mine: boolean
+  opened: boolean
+  first: boolean
+  last: boolean
+}) {
+  return (
+    <span
+      className={cx(
+        'flex min-w-[168px] items-center gap-3 rounded-[22px] px-3.5 py-3',
+        mine ? 'bg-[#3797f0]' : 'bg-[#262626]',
+        mine && !first && 'rounded-tr-[6px]',
+        mine && !last && 'rounded-br-[6px]',
+        !mine && !first && 'rounded-tl-[6px]',
+        !mine && !last && 'rounded-bl-[6px]',
+        opened && 'opacity-70',
+      )}
+    >
+      <span
+        className={cx(
+          'grid h-10 w-10 shrink-0 place-items-center rounded-full text-[15px] font-bold',
+          opened
+            ? 'border-2 border-white/70 bg-transparent text-white/80'
+            : mine
+              ? 'bg-white text-[#3797f0]'
+              : 'bg-[conic-gradient(from_200deg,#f9ce34,#ee2a7b,#6228d7,#f9ce34)] p-[2px]',
+        )}
+      >
+        {opened ? (
+          <span className="text-[13px] font-semibold">✓</span>
+        ) : mine ? (
+          '1'
+        ) : (
+          <span className="grid h-full w-full place-items-center rounded-full bg-[#262626] text-white">1</span>
+        )}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-[15px] font-semibold leading-tight">{opened ? 'Açıldı' : 'Fotoğraf'}</span>
+        <span className="block text-[12px] leading-tight text-white/70">
+          {opened ? 'Tek görüntüleme' : mine ? 'Gönderildi' : 'Görmek için dokun'}
+        </span>
+      </span>
+    </span>
+  )
 }
