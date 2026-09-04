@@ -1,4 +1,4 @@
-import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, MapPin, Music2, Users, X } from 'lucide-react'
+import { Camera, ChevronDown, ChevronLeft, ChevronRight, Copy, MapPin, Music2, RectangleVertical, Square, Users, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useNavigate } from '../lib/nav'
@@ -24,12 +24,15 @@ import { storyService } from '../services/storyService'
 import { userService } from '../services/userService'
 import { useUiStore } from '../store/uiStore'
 import { MentionField } from '../components/ui/MentionField'
+import { MediaCrop, type MediaCropHandle } from '../components/ui/MediaCrop'
 
 type MediaItem = {
   id: string
   file: File
   url: string
   kind: 'image' | 'video'
+  cropped?: File
+  croppedUrl?: string
 }
 
 const TABS: { id: CreateTab; label: string }[] = [
@@ -55,13 +58,21 @@ function filesToItems(files: File[]): MediaItem[] {
 
 function filterFiles(files: File[], tab: CreateTab): File[] {
   return files.filter((file) => {
-    if (!file.type) return true
-    return tab === 'reel' ? file.type.startsWith('video') : file.type.startsWith('image')
+    const name = file.name.toLowerCase()
+    const image =
+      !file.type ||
+      file.type.startsWith('image/') ||
+      /\.(jpe?g|png|gif|webp|heic|heif)$/.test(name)
+    const video = file.type.startsWith('video/') || /\.(mp4|mov|webm|m4v)$/.test(name)
+    return tab === 'reel' ? video : image
   })
 }
 
 function revokeAll(items: MediaItem[]): void {
-  for (const item of items) URL.revokeObjectURL(item.url)
+  for (const item of items) {
+    URL.revokeObjectURL(item.url)
+    if (item.croppedUrl) URL.revokeObjectURL(item.croppedUrl)
+  }
 }
 
 export function CreatePage() {
@@ -71,12 +82,14 @@ export function CreatePage() {
   const route = useLocation()
   const tab = tabFromPath(route.pathname)
   const cameraRef = useRef<HTMLInputElement>(null)
+  const cropRef = useRef<MediaCropHandle>(null)
 
   const [step, setStep] = useState<'gallery' | 'compose'>('gallery')
   const [items, setItems] = useState<MediaItem[]>([])
   const [activeId, setActiveId] = useState<string | null>(null)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [multi, setMulti] = useState(false)
+  const [postRatio, setPostRatio] = useState<'1:1' | '4:5'>('1:1')
   const [caption, setCaption] = useState('')
   const [music, setMusic] = useState('')
   const [location, setLocation] = useState('')
@@ -120,6 +133,7 @@ export function CreatePage() {
     setActiveId(null)
     setSelectedIds([])
     setMulti(false)
+    setPostRatio('1:1')
     setCaption('')
     setLocation('')
     setTaggedIds([])
@@ -164,12 +178,38 @@ export function CreatePage() {
     )
   }
 
+  const cropAspect = tab === 'story' ? 9 / 16 : postRatio === '4:5' ? 4 / 5 : 1
+
   const goNext = () => {
     if (!active) {
       openCreatePicker(tab)
       return
     }
-    setStep('compose')
+    if (active.kind !== 'image') {
+      setStep('compose')
+      return
+    }
+    if (busy) return
+    setBusy(true)
+    void (async () => {
+      try {
+        const cropped = await cropRef.current?.exportFile(tab === 'story' ? 'story.jpg' : 'post.jpg')
+        if (!cropped) throw new Error('Fotoğrafı ayarla')
+        const croppedUrl = URL.createObjectURL(cropped)
+        setItems((prev) =>
+          prev.map((item) => {
+            if (item.id !== active.id) return item
+            if (item.croppedUrl) URL.revokeObjectURL(item.croppedUrl)
+            return { ...item, cropped, croppedUrl }
+          }),
+        )
+        setStep('compose')
+      } catch (err) {
+        toast(err instanceof Error ? err.message : 'Fotoğraf ayarlanamadı', 'err')
+      } finally {
+        setBusy(false)
+      }
+    })()
   }
 
   const share = async () => {
@@ -184,7 +224,7 @@ export function CreatePage() {
           toast('Gönderi için fotoğraf seç', 'err')
           return
         }
-        const image = await uploadImageFile(active.file)
+        const image = await uploadImageFile(active.cropped ?? active.file)
         const post = postService.create(user.id, image, caption.trim() || 'Cadde 54', {
           location: location.trim() || undefined,
           altText: altText.trim() || undefined,
@@ -219,7 +259,7 @@ export function CreatePage() {
           toast('Story için fotoğraf seç', 'err')
           return
         }
-        const image = await uploadImageFile(active.file, 1200)
+        const image = await uploadImageFile(active.cropped ?? active.file, 1200)
         storyService.create(user.id, image, taggedIds)
         mentionService.notify(user.id, '', {
           label: 'bir hikayede senden bahsetti',
@@ -276,31 +316,59 @@ export function CreatePage() {
               <button
                 type="button"
                 onClick={goNext}
-                className="pr-3 text-right text-[16px] font-semibold text-hot"
+                disabled={busy}
+                className="pr-3 text-right text-[16px] font-semibold text-hot disabled:opacity-50"
               >
-                İleri
+                {busy ? '...' : 'İleri'}
               </button>
             </header>
 
-            <button
-              type="button"
-              onClick={() => {
-                if (!active) openCreatePicker(tab)
-              }}
-              className="relative aspect-square w-full shrink-0 overflow-hidden bg-neutral-950"
-            >
-              {active ? (
-                active.kind === 'video' ? (
-                  <video src={active.url} className="h-full w-full object-cover" autoPlay muted loop playsInline />
-                ) : (
-                  <img src={active.url} alt="" className="h-full w-full object-cover" />
-                )
-              ) : (
-                <span className="grid h-full place-items-center px-8 text-center text-sm text-neutral-400">
-                  Galerinden seçmek için dokun
-                </span>
+            <div
+              className={cx(
+                'relative shrink-0 overflow-hidden bg-neutral-950',
+                tab === 'story' ? 'min-h-0 flex-1' : postRatio === '4:5' ? 'aspect-[4/5] w-full' : 'aspect-square w-full',
               )}
-            </button>
+            >
+              {active?.kind === 'image' ? (
+                <MediaCrop
+                  key={`${active.id}-${cropAspect}`}
+                  ref={cropRef}
+                  src={active.url}
+                  aspect={cropAspect}
+                />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!active) openCreatePicker(tab)
+                  }}
+                  className="h-full w-full"
+                >
+                  {active ? (
+                    <video src={active.url} className="h-full w-full object-cover" autoPlay muted loop playsInline />
+                  ) : (
+                    <span className="grid h-full place-items-center px-8 text-center text-sm text-neutral-400">
+                      Galerinden seçmek için dokun
+                    </span>
+                  )}
+                </button>
+              )}
+              {active?.kind === 'image' && tab === 'post' ? (
+                <button
+                  type="button"
+                  onClick={() => setPostRatio((r) => (r === '1:1' ? '4:5' : '1:1'))}
+                  className="absolute bottom-3 left-3 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-black/55"
+                  aria-label="En boy oranı"
+                >
+                  {postRatio === '1:1' ? <Square className="h-4 w-4" /> : <RectangleVertical className="h-4 w-4" />}
+                </button>
+              ) : null}
+              {active?.kind === 'image' ? (
+                <p className="pointer-events-none absolute inset-x-0 top-3 text-center text-[12px] font-medium text-white/80 drop-shadow">
+                  Sürükle veya pinch
+                </p>
+              ) : null}
+            </div>
 
             <div className="flex h-12 shrink-0 items-center justify-between px-3">
               <button
@@ -336,7 +404,7 @@ export function CreatePage() {
               </div>
             </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto no-scrollbar">
+            <div className={cx('min-h-0 overflow-y-auto no-scrollbar', tab === 'story' ? 'max-h-[22vh] shrink-0' : 'flex-1')}>
               {items.length ? (
                 <div className="grid grid-cols-4 gap-[2px] bg-black">
                   {items.map((item) => {
@@ -418,7 +486,7 @@ export function CreatePage() {
                   {active?.kind === 'video' ? (
                     <video src={active.url} className="h-full w-full object-cover" muted playsInline />
                   ) : (
-                    <img src={active?.url} alt="" className="h-full w-full object-cover" />
+                    <img src={active?.croppedUrl ?? active?.url} alt="" className="h-full w-full object-cover" />
                   )}
                 </div>
                 {tab !== 'story' ? (

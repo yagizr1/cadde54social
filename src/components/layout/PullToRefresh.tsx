@@ -54,7 +54,7 @@ export function PullToRefresh({
     const el = root.current
     if (!el) return
     const onMove = (e: TouchEvent) => {
-      if (mode.current === 'pull') e.preventDefault()
+      if (mode.current === 'pull' && pullRef.current > 0) e.preventDefault()
     }
     el.addEventListener('touchmove', onMove, { passive: false })
     return () => el.removeEventListener('touchmove', onMove)
@@ -93,6 +93,12 @@ export function PullToRefresh({
         if (mode.current !== 'pull') return
         if (dy <= 0 || !pageTop()) {
           setPullBoth(0)
+          mode.current = 'scroll'
+          try {
+            e.currentTarget.releasePointerCapture(e.pointerId)
+          } catch {
+            /* ignore */
+          }
           return
         }
         setPullBoth(Math.min(MAX, (dy - LOCK) * 0.48))

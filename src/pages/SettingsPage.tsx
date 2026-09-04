@@ -105,7 +105,7 @@ function Choice({
 
 function Shell({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <div className="mx-auto max-w-xl px-4 py-4 anim-page">
+    <div className="mx-auto max-w-xl px-4 py-4 pb-10 anim-page">
       <h1 className="font-display text-2xl font-bold">{title}</h1>
       <div className="mt-5">{children}</div>
     </div>
@@ -172,7 +172,7 @@ function SettingsHome() {
   ]
 
   return (
-    <div className="mx-auto max-w-xl px-4 py-4 anim-page">
+    <div className="mx-auto max-w-xl px-4 py-4 pb-10 anim-page">
       <h1 className="font-display text-2xl font-bold">Ayarlar</h1>
       <div className="mt-5 space-y-6">
         {groups.map((g) => (

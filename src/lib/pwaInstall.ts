@@ -29,7 +29,19 @@ export function isStandalone(): boolean {
 }
 
 export function isIos(): boolean {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent)
+  if (typeof navigator === 'undefined') return false
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1)
+}
+
+export function isIosSafari(): boolean {
+  if (!isIos()) return false
+  const ua = navigator.userAgent
+  if (/CriOS|FxiOS|EdgiOS|OPiOS|Instagram|FBAN|FBAV|Line\/|Twitter|TikTok|Snapchat|GSA\//i.test(ua)) return false
+  return /Safari/i.test(ua)
+}
+
+export function isIosInAppBrowser(): boolean {
+  return isIos() && !isIosSafari()
 }
 
 export function listenPwaInstall(): void {

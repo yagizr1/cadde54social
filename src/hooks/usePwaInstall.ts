@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import {
   isIos,
+  isIosInAppBrowser,
+  isIosSafari,
   isStandalone,
   promptPwaInstall,
   subscribePwaInstall,
@@ -13,6 +15,8 @@ export function usePwaInstall() {
   return {
     installed: isStandalone(),
     ios: isIos(),
+    iosSafari: isIosSafari(),
+    iosInApp: isIosInAppBrowser(),
     prompt: promptPwaInstall,
   }
 }
