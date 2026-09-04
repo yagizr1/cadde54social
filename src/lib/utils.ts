@@ -81,7 +81,7 @@ export function monthKey(ts = Date.now()): string {
   return dayKey(ts).slice(0, 7)
 }
 
-export function fileToDataUrl(file: File): Promise<string> {
+export function fileToDataUrl(file: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
     reader.onload = () => resolve(String(reader.result))
@@ -90,7 +90,37 @@ export function fileToDataUrl(file: File): Promise<string> {
   })
 }
 
-export async function compressImage(file: File, max = 1080, quality = 0.78): Promise<string> {
+export function dataUrlToBlob(dataUrl: string): Blob {
+  const comma = dataUrl.indexOf(',')
+  if (comma < 0) throw new Error('Görsel yüklenemedi')
+  const mime = dataUrl.slice(0, comma).match(/data:(.*?);/)?.[1] || 'image/jpeg'
+  const binary = atob(dataUrl.slice(comma + 1))
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i)
+  return new Blob([bytes], { type: mime })
+}
+
+function canvasToJpeg(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob)
+          return
+        }
+        try {
+          resolve(dataUrlToBlob(canvas.toDataURL('image/jpeg', quality)))
+        } catch {
+          reject(new Error('Görsel sıkıştırılamadı'))
+        }
+      },
+      'image/jpeg',
+      quality,
+    )
+  })
+}
+
+export async function compressImageToBlob(file: Blob, max = 1080, quality = 0.78): Promise<Blob> {
   const url = URL.createObjectURL(file)
   try {
     const img = await loadImage(url)
@@ -99,18 +129,31 @@ export async function compressImage(file: File, max = 1080, quality = 0.78): Pro
     canvas.width = Math.max(1, Math.round(img.width * scale))
     canvas.height = Math.max(1, Math.round(img.height * scale))
     const ctx = canvas.getContext('2d')
-    if (!ctx) return fileToDataUrl(file)
+    if (!ctx) throw new Error('Görsel sıkıştırılamadı')
+    ctx.fillStyle = '#000'
+    ctx.fillRect(0, 0, canvas.width, canvas.height)
     ctx.drawImage(img, 0, 0, canvas.width, canvas.height)
-    return canvas.toDataURL('image/jpeg', quality)
+    return canvasToJpeg(canvas, quality)
   } finally {
     URL.revokeObjectURL(url)
+  }
+}
+
+export async function compressImage(file: File, max = 1080, quality = 0.78): Promise<string> {
+  try {
+    return fileToDataUrl(await compressImageToBlob(file, max, quality))
+  } catch {
+    return fileToDataUrl(file)
   }
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image()
-    img.onload = () => resolve(img)
+    img.onload = () => {
+      const ready = typeof img.decode === 'function' ? img.decode() : Promise.resolve()
+      ready.then(() => resolve(img)).catch(() => resolve(img))
+    }
     img.onerror = () => reject(new Error('Görsel yüklenemedi'))
     img.src = src
   })

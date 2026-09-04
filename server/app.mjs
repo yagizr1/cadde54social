@@ -175,12 +175,19 @@ export function createApiApp() {
     }
   })
 
-  app.post('/api/upload', auth, upload.single('file'), (req, res) => {
-    if (!req.file) {
-      res.status(400).json({ error: 'Dosya gerekli' })
-      return
-    }
-    res.json({ url: `/uploads/${req.file.filename}` })
+  app.post('/api/upload', auth, (req, res) => {
+    upload.single('file')(req, res, (err) => {
+      if (err) {
+        const tooBig = err.code === 'LIMIT_FILE_SIZE'
+        res.status(tooBig ? 413 : 400).json({ error: tooBig ? 'Fotoğraf çok büyük' : 'Yükleme başarısız' })
+        return
+      }
+      if (!req.file) {
+        res.status(400).json({ error: 'Dosya gerekli' })
+        return
+      }
+      res.json({ url: `/uploads/${req.file.filename}` })
+    })
   })
 
   app.use('/api', (_req, res) => {

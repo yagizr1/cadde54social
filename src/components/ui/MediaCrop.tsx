@@ -1,4 +1,5 @@
 import { useEffect, useImperativeHandle, useRef, useState, forwardRef } from 'react'
+import { dataUrlToBlob } from '../../lib/utils'
 
 export type MediaCropHandle = {
   exportFile: (filename?: string) => Promise<File>
@@ -24,6 +25,7 @@ export const MediaCrop = forwardRef<
   const drag = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null)
   const pinch = useRef<{ dist: number; zoom: number } | null>(null)
   const pointers = useRef(new Map<number, { x: number; y: number }>())
+  const geom = useRef({ size: { w: 0, h: 0 }, view: { w: 0, h: 0 }, s: 1, left: 0, top: 0, aspect })
   const [view, setView] = useState({ w: 0, h: 0 })
   const [size, setSize] = useState({ w: 0, h: 0 })
   const [zoom, setZoom] = useState(1)
@@ -51,6 +53,7 @@ export const MediaCrop = forwardRef<
   const s = cover * zoom
   const left = view.w / 2 + pos.x - (size.w * s) / 2
   const top = view.h / 2 + pos.y - (size.h * s) / 2
+  geom.current = { size, view, s, left, top, aspect }
 
   function setZoomClamped(next: number) {
     const z = Math.min(4, Math.max(1, next))
@@ -103,28 +106,36 @@ export const MediaCrop = forwardRef<
   useImperativeHandle(ref, () => ({
     async exportFile(filename = 'image.jpg') {
       const img = imgRef.current
-      if (!img || !size.w || !view.w) throw new Error('Fotoğraf hazır değil')
+      const { size: sz, view: vw, s: scale, left: x, top: y, aspect: ratio } = geom.current
+      if (!img || !sz.w || !vw.w) throw new Error('Fotoğraf hazır değil')
       const max = 1080
-      const outW = aspect >= 1 ? max : Math.max(1, Math.round(max * aspect))
-      const outH = aspect >= 1 ? Math.max(1, Math.round(max / aspect)) : max
+      const outW = ratio >= 1 ? max : Math.max(1, Math.round(max * ratio))
+      const outH = ratio >= 1 ? Math.max(1, Math.round(max / ratio)) : max
       const canvas = document.createElement('canvas')
       canvas.width = outW
       canvas.height = outH
       const ctx = canvas.getContext('2d')
       if (!ctx) throw new Error('Kırpılamadı')
-      const k = outW / view.w
+      const k = outW / vw.w
       ctx.fillStyle = '#000'
       ctx.fillRect(0, 0, outW, outH)
-      ctx.drawImage(img, left * k, top * k, size.w * s * k, size.h * s * k)
+      ctx.drawImage(img, x * k, y * k, sz.w * scale * k, sz.h * scale * k)
       const blob = await new Promise<Blob>((resolve, reject) => {
         canvas.toBlob((next) => {
-          if (next) resolve(next)
-          else reject(new Error('Kırpılamadı'))
+          if (next) {
+            resolve(next)
+            return
+          }
+          try {
+            resolve(dataUrlToBlob(canvas.toDataURL('image/jpeg', 0.92)))
+          } catch {
+            reject(new Error('Kırpılamadı'))
+          }
         }, 'image/jpeg', 0.92)
       })
       return new File([blob], filename, { type: 'image/jpeg' })
     },
-  }))
+  }), [])
 
   return (
     <div

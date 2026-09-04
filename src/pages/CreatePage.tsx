@@ -83,6 +83,7 @@ export function CreatePage() {
   const tab = tabFromPath(route.pathname)
   const cameraRef = useRef<HTMLInputElement>(null)
   const cropRef = useRef<MediaCropHandle>(null)
+  const croppedFileRef = useRef<File | null>(null)
 
   const [step, setStep] = useState<'gallery' | 'compose'>('gallery')
   const [items, setItems] = useState<MediaItem[]>([])
@@ -113,6 +114,7 @@ export function CreatePage() {
       return
     }
     const next = filesToItems(tab === 'post' ? filtered : filtered.slice(0, 1))
+    croppedFileRef.current = null
     setItems((prev) => {
       revokeAll(prev)
       return next
@@ -130,6 +132,7 @@ export function CreatePage() {
       revokeAll(prev)
       return []
     })
+    croppedFileRef.current = null
     setActiveId(null)
     setSelectedIds([])
     setMulti(false)
@@ -195,6 +198,7 @@ export function CreatePage() {
       try {
         const cropped = await cropRef.current?.exportFile(tab === 'story' ? 'story.jpg' : 'post.jpg')
         if (!cropped) throw new Error('Fotoğrafı ayarla')
+        croppedFileRef.current = cropped
         const croppedUrl = URL.createObjectURL(cropped)
         setItems((prev) =>
           prev.map((item) => {
@@ -224,7 +228,7 @@ export function CreatePage() {
           toast('Gönderi için fotoğraf seç', 'err')
           return
         }
-        const image = await uploadImageFile(active.cropped ?? active.file)
+        const image = await uploadImageFile(croppedFileRef.current ?? active.cropped ?? active.file)
         const post = postService.create(user.id, image, caption.trim() || 'Cadde 54', {
           location: location.trim() || undefined,
           altText: altText.trim() || undefined,
@@ -259,7 +263,7 @@ export function CreatePage() {
           toast('Story için fotoğraf seç', 'err')
           return
         }
-        const image = await uploadImageFile(active.cropped ?? active.file, 1200)
+        const image = await uploadImageFile(croppedFileRef.current ?? active.cropped ?? active.file, 1200)
         storyService.create(user.id, image, taggedIds)
         mentionService.notify(user.id, '', {
           label: 'bir hikayede senden bahsetti',
@@ -296,8 +300,8 @@ export function CreatePage() {
       clearCreateFiles()
       refresh()
       navigate('/reels')
-    } catch {
-      toast('Paylaşılamadı', 'err')
+    } catch (err) {
+      toast(err instanceof Error ? err.message : 'Paylaşılamadı', 'err')
     } finally {
       setBusy(false)
     }

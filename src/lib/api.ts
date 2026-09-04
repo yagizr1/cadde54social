@@ -30,6 +30,8 @@ export async function api<T = Record<string, unknown>>(path: string, init: ApiIn
   }
   const res = await fetch(path, { ...init, headers, body: body as BodyInit | undefined })
   const data = (await res.json().catch(() => ({}))) as T & { error?: string; ok?: boolean }
+  if (res.status === 401) throw new Error('Oturumun doldu, tekrar giriş yap')
+  if (res.status === 413) throw new Error('Fotoğraf çok büyük')
   if (!res.ok) throw new Error(data.error || 'İstek başarısız')
   return data
 }
