@@ -1,0 +1,1129 @@
+# CADDE54 VIBE — ADMIN PANEL GELİŞTİRME PROMPTU
+
+Sen deneyimli bir **Senior React + TypeScript frontend geliştiricisisin.**
+
+Mevcut **Cadde54 Vibe** isimli sosyal medya/PWA projesine profesyonel bir **Admin Panel** geliştir.
+
+## 1. TEKNOLOJİ
+
+Mevcut projedeki teknolojileri koru.
+
+Tercih:
+
+* React
+* TypeScript
+* Vite
+* Tailwind CSS
+* React Router
+* Lucide React
+* Zustand
+* localStorage
+* Recharts veya benzeri grafik kütüphanesi
+
+Backend şu anda hazır değil.
+
+Bu nedenle bütün admin işlemleri şimdilik **mock data + localStorage** ile gerçekten çalışmalı.
+
+Ancak kod mimarisini ileride:
+
+```text
+React Admin Panel
+        ↓
+REST API
+        ↓
+Node.js / Express
+        ↓
+PostgreSQL
+```
+
+şeklinde kolayca backend'e bağlanabilecek şekilde oluştur.
+
+---
+
+# 2. ADMIN PANEL TASARIMI
+
+Panel mobilde de açılabilsin fakat öncelik **desktop/tablet admin kullanımı** olsun.
+
+Tasarım:
+
+* Modern
+* Premium
+* Dark theme
+* Temiz
+* Profesyonel
+* Gereksiz animasyon yok
+* Responsive
+* Sidebar
+* Üst navbar
+* Kartlar
+* Grafikler
+* Tablolar
+* Modal pencereler
+* Toast bildirimleri
+
+Cadde54 Vibe'ın genç ve sosyal medya havasını koru ama admin paneli normal kullanıcı uygulamasından daha ciddi ve profesyonel görünsün.
+
+---
+
+# 3. ADMIN LOGIN
+
+Ayrı admin login ekranı oluştur.
+
+Demo bilgiler:
+
+```text
+Username: admin
+Password: admin
+```
+
+Login bilgileri localStorage/sessionStorage ile yönetilsin.
+
+Admin login olmadan:
+
+```text
+/admin/*
+```
+
+sayfalarına erişilemesin.
+
+Kullanıcı uygulamasındaki normal login sistemi admin paneline erişim vermesin.
+
+Logout butonu çalışmalı.
+
+---
+
+# 4. SIDEBAR
+
+Sol tarafta:
+
+```text
+CADDE54 VIBE
+ADMIN PANEL
+
+🏠 Dashboard
+
+👥 Kullanıcılar
+
+🚨 Moderasyon
+📝 İçerikler
+💬 İtiraflar
+
+🏆 XP & Görevler
+🎁 Ödüller
+
+💎 Premium
+
+📊 Analytics
+
+📢 Duyurular
+
+🏪 İşletmeler
+
+📍 Cadde54
+
+⚙️ Ayarlar
+
+👑 Adminler
+```
+
+Sidebar mobilde drawer olarak çalışsın.
+
+Aktif sayfa açıkça belli olsun.
+
+---
+
+# 5. DASHBOARD
+
+Admin giriş yaptığında ilk olarak Dashboard açılsın.
+
+Üst bölümde istatistik kartları:
+
+```text
+Toplam Kullanıcı
+12.482
+
+Aktif Kullanıcı
+3.214
+
+Premium Kullanıcı
+1.087
+
+Aylık Premium Geliri
+108.700 TL
+```
+
+Altında:
+
+### Kullanıcı Grafiği
+
+Son 7 / 30 / 90 gün:
+
+* Yeni kayıtlar
+* Aktif kullanıcılar
+
+line chart.
+
+### Premium Grafiği
+
+* Premium kullanıcı sayısı
+* Premium dönüşüm oranı
+* Tahmini aylık gelir
+
+### Aktivite
+
+Kartlar:
+
+```text
+❤️ Bugünkü Like
+12.482
+
+💬 Bugünkü Yorum
+3.821
+
+📝 Bugünkü Post
+1.284
+
+🎥 Bugünkü Reels
+492
+
+📍 Buradayım
+327
+```
+
+### Son aktiviteler
+
+Örnek:
+
+```text
+@efe yeni bir Reels paylaştı
+2 dk önce
+
+@berkay Premium oldu
+5 dk önce
+
+@ayse yeni itiraf gönderdi
+8 dk önce
+
+@kaan 500 XP kazandı
+12 dk önce
+```
+
+---
+
+# 6. KULLANICI YÖNETİMİ
+
+`/admin/users`
+
+sayfası oluştur.
+
+Tablo:
+
+```text
+Avatar
+İsim
+Username
+Email
+Premium
+XP
+Level
+Takipçi
+Son Aktiflik
+Durum
+İşlemler
+```
+
+Arama:
+
+```text
+@username ara...
+```
+
+Filtreler:
+
+```text
+Tümü
+Premium
+Free
+Aktif
+Banlı
+Yeni kullanıcılar
+```
+
+İşlemler:
+
+* Profili görüntüle
+* Kullanıcı detayları
+* Premium yap
+* Premium kaldır
+* XP ekle
+* XP çıkar
+* Uyar
+* Geçici ban
+* Kalıcı ban
+* Ban kaldır
+* Hesabı kapat
+
+Silme/ban işlemlerinde confirmation modal göster.
+
+---
+
+# 7. KULLANICI DETAY SAYFASI
+
+Bir kullanıcıya tıklanınca:
+
+```text
+Avatar
+İsim
+@username
+Email
+Kayıt tarihi
+Premium durumu
+XP
+Level
+Followers
+Following
+Son aktiflik
+```
+
+göster.
+
+Altında:
+
+### Aktivite
+
+* Post sayısı
+* Reels sayısı
+* Story sayısı
+* Like sayısı
+* Yorum sayısı
+* XP geçmişi
+* Profil görüntülenmeleri
+
+### Admin işlemleri
+
+```text
++ XP
+Premium Ver
+Uyar
+Banla
+Hesabı Kapat
+```
+
+---
+
+# 8. MODERASYON
+
+`/admin/moderation`
+
+sayfası oluştur.
+
+Şikayet edilen içerikleri listele.
+
+Her kayıt:
+
+```text
+Şikayet eden
+İçerik sahibi
+İçerik
+Şikayet sebebi
+Tarih
+Durum
+```
+
+Şikayet sebepleri:
+
+```text
+Spam
+Taciz
+Küfür
+Uygunsuz içerik
+Tehdit
+Sahte hesap
+Kişisel bilgi
+Diğer
+```
+
+İşlemler:
+
+```text
+İçeriği Gör
+Sil
+Kullanıcıyı Uyar
+Kullanıcıyı Banla
+Şikayeti Reddet
+```
+
+Durumlar:
+
+```text
+Bekliyor
+İncelendi
+Çözüldü
+Reddedildi
+```
+
+---
+
+# 9. İTİRAFLAR
+
+`/admin/confessions`
+
+Özel itiraf moderasyon ekranı oluştur.
+
+Çünkü itiraflar anonim olduğu için özellikle dikkatli yönetilmeli.
+
+Liste:
+
+```text
+İtiraf
+Tarih
+Like
+Yorum
+Şikayet
+Durum
+```
+
+Admin:
+
+* Görüntüle
+* Yayından kaldır
+* Şikayeti incele
+* Kullanıcıyı tespit edebilecek admin bilgilerini sadece yetkili alanda göster
+* Uyarı gönder
+
+İtiraflarda:
+
+* Kişisel bilgi
+* Telefon
+* Adres
+* Taciz
+* Tehdit
+* Hedef gösterme
+
+gibi içeriklere karşı moderasyon uyarısı göster.
+
+---
+
+# 10. İÇERİK YÖNETİMİ
+
+`/admin/content`
+
+Sekmeler:
+
+```text
+Postlar
+Reels
+Storyler
+Yorumlar
+```
+
+Admin bütün içerikleri görebilsin.
+
+Filtre:
+
+```text
+En yeni
+En çok beğenilen
+En çok yorumlanan
+En çok şikayet edilen
+```
+
+Admin içeriği silebilsin.
+
+---
+
+# 11. XP & GÖREVLER
+
+`/admin/challenges`
+
+Görev yönetim sistemi oluştur.
+
+Admin:
+
+```text
+Yeni görev oluştur
+```
+
+butonuna basınca modal:
+
+```text
+Görev adı
+Açıklama
+XP ödülü
+Günlük / Haftalık
+Başlangıç tarihi
+Bitiş tarihi
+Aktif/Pasif
+```
+
+Örnek:
+
+```text
+Bugün 3 gönderiye yorum yap
++100 XP
+Günlük
+```
+
+Görevleri:
+
+* Düzenle
+* Sil
+* Aktifleştir
+* Pasifleştir
+
+---
+
+# 12. XP AYARLARI
+
+Admin XP kazanma miktarlarını değiştirebilsin.
+
+Örneğin:
+
+```text
+Post paylaşma        +50 XP
+Story paylaşma       +50 XP
+Like                 +5 XP
+Yorum                +10 XP
+Buradayım            +100 XP
+Günlük giriş         +20 XP
+Reels paylaşma       +75 XP
+```
+
+Admin bu değerleri değiştirebilsin.
+
+Değişiklik localStorage'a kaydedilsin.
+
+---
+
+# 13. LEADERBOARD
+
+Admin:
+
+```text
+Haftalık
+Aylık
+Genel
+```
+
+leaderboardları görebilsin.
+
+Örnek:
+
+```text
+🥇 @efe       12.450 XP
+🥈 @admin     11.820 XP
+🥉 @berkay    10.920 XP
+```
+
+Admin gerekirse kullanıcıya manuel XP ekleyebilsin.
+
+---
+
+# 14. ÖDÜL SİSTEMİ
+
+`/admin/rewards`
+
+Admin yeni ödül oluşturabilsin.
+
+Form:
+
+```text
+Ödül adı
+Açıklama
+Ödül görseli
+Kazanan sayısı
+Başlangıç tarihi
+Bitiş tarihi
+Gerekli XP
+Aktif/Pasif
+```
+
+Örnek:
+
+```text
+🎧 JBL Kulaklık
+3 Kazanan
+Minimum 500 XP
+```
+
+Ödül geçmişi tutulmalı.
+
+Kazananlar:
+
+```text
+Ödül
+Kazanan
+Tarih
+Durum
+```
+
+olarak gösterilsin.
+
+---
+
+# 15. PREMIUM YÖNETİMİ
+
+`/admin/premium`
+
+Göster:
+
+```text
+Toplam Premium
+Bu ay yeni Premium
+İptal edilen
+Premium dönüşüm oranı
+Aylık gelir
+```
+
+Grafikler oluştur.
+
+Premium kullanıcı tablosu:
+
+```text
+Kullanıcı
+Başlangıç
+Bitiş
+Durum
+```
+
+Admin:
+
+* Premium ver
+* Premium uzat
+* Premium iptal et
+
+işlemlerini yapabilsin.
+
+Premium fiyatı ayarlardan değiştirilebilsin.
+
+Varsayılan:
+
+```text
+99.90 TL / ay
+```
+
+---
+
+# 16. ANALYTICS
+
+`/admin/analytics`
+
+Profesyonel analytics dashboard oluştur.
+
+Göster:
+
+### Kullanıcı
+
+* DAU
+* WAU
+* MAU
+* Yeni kayıt
+* Retention
+* Aktif kullanıcı oranı
+
+### İçerik
+
+* Post
+* Reels
+* Story
+* Like
+* Yorum
+* Paylaşım
+
+### Premium
+
+* Premium kullanıcı
+* Premium dönüşüm
+* Aylık gelir
+* İptal oranı
+
+### En çok kullanılan özellikler
+
+Örneğin:
+
+```text
+Feed             38%
+Reels            24%
+İtiraflar        16%
+DM               12%
+Buradayım         7%
+Diğer             3%
+```
+
+Grafikleri responsive yap.
+
+---
+
+# 17. DUYURU SİSTEMİ
+
+`/admin/announcements`
+
+Admin yeni duyuru oluşturabilsin.
+
+Form:
+
+```text
+Başlık
+Mesaj
+Görsel
+Bildirim gönder
+Hedef kitle
+```
+
+Hedef kitle:
+
+```text
+Tüm kullanıcılar
+Free kullanıcılar
+Premium kullanıcılar
+```
+
+Örnek:
+
+```text
+🔥 Yeni görevler başladı!
+
+Bu haftaki görevleri tamamla ve 1.000 XP kazan.
+```
+
+Duyurular geçmişte listelensin.
+
+---
+
+# 18. İŞLETME YÖNETİMİ
+
+`/admin/businesses`
+
+İleride Cadde 54 işletmelerini sisteme dahil edeceğiz.
+
+Şimdiden panelini hazırla.
+
+İşletme:
+
+```text
+İşletme adı
+Logo
+Kategori
+Açıklama
+Konum
+Instagram
+Website
+Durum
+```
+
+Durum:
+
+```text
+Bekliyor
+Onaylı
+Reddedildi
+Askıya alındı
+```
+
+Admin:
+
+* İşletme ekle
+* Düzenle
+* Onayla
+* Reddet
+* Askıya al
+
+işlemlerini yapabilsin.
+
+---
+
+# 19. CADDE54 AYARLARI
+
+`/admin/cadde54`
+
+Özel ayarlar:
+
+```text
+Cadde54 Geofence
+
+Latitude
+Longitude
+Radius
+```
+
+Varsayılan radius:
+
+```text
+250 metre
+```
+
+Buradayım süresi:
+
+```text
+2 saat
+```
+
+Admin bunları değiştirebilsin.
+
+Ayrıca:
+
+```text
+Buradayım sistemi
+ON / OFF
+```
+
+---
+
+# 20. SİSTEM AYARLARI
+
+`/admin/settings`
+
+Ayarlar:
+
+### Genel
+
+```text
+Uygulama adı
+Logo
+Favicon
+Bakım modu
+```
+
+### Premium
+
+```text
+Premium fiyatı
+```
+
+Varsayılan:
+
+```text
+99.90 TL
+```
+
+### Kullanıcı
+
+```text
+Yeni kayıt açık/kapalı
+```
+
+### İçerik
+
+```text
+Maksimum video boyutu
+Maksimum video süresi
+```
+
+### Bildirim
+
+```text
+Push notification açık/kapalı
+```
+
+Değişiklikleri localStorage'a kaydet.
+
+---
+
+# 21. ADMIN YÖNETİMİ
+
+`/admin/admins`
+
+Admin kullanıcılarını yönet.
+
+Roller:
+
+```text
+Super Admin
+Admin
+Moderator
+Support
+```
+
+Yetkiler:
+
+### Super Admin
+
+Her şeye erişebilir.
+
+### Admin
+
+Kullanıcılar + içerikler + analytics.
+
+### Moderator
+
+Moderasyon + itiraflar + içerikler.
+
+### Support
+
+Kullanıcı detayları + destek.
+
+Rol bazlı route protection oluştur.
+
+---
+
+# 22. BİLDİRİMLER
+
+Admin panelinde sağ üstte notification icon olsun.
+
+Örneğin:
+
+```text
+🔴 12
+
+12 yeni şikayet
+3 yeni işletme başvurusu
+5 yeni kullanıcı raporu
+```
+
+Tıklanınca ilgili sayfaya gitsin.
+
+---
+
+# 23. TOAST SİSTEMİ
+
+Her işlem sonrasında toast göster.
+
+Örnek:
+
+```text
+✓ Kullanıcı başarıyla Premium yapıldı.
+
+✓ Görev oluşturuldu.
+
+✓ İçerik silindi.
+
+✓ XP başarıyla eklendi.
+
+✓ Duyuru gönderildi.
+```
+
+Hata durumlarında:
+
+```text
+✕ İşlem gerçekleştirilemedi.
+```
+
+---
+
+# 24. MOCK DATA
+
+Uygulama ilk çalıştığında gerçekçi demo veriler oluştur.
+
+En az:
+
+* 30 kullanıcı
+* 10 post
+* 10 reels
+* 10 itiraf
+* 10 şikayet
+* 10 görev
+* 5 ödül
+* 10 premium kullanıcı
+* 10 bildirim
+* 5 işletme
+
+oluştur.
+
+Demo veriler sayfaları boş göstermesin.
+
+---
+
+# 25. LOCALSTORAGE MİMARİSİ
+
+Admin panelinde verileri doğrudan component içine yazma.
+
+Service katmanı oluştur:
+
+```text
+src/
+  admin/
+    pages/
+    components/
+    services/
+    store/
+    types/
+```
+
+Örneğin:
+
+```text
+adminUserService
+adminModerationService
+adminChallengeService
+adminRewardService
+adminPremiumService
+adminAnalyticsService
+adminAnnouncementService
+adminBusinessService
+adminSettingsService
+```
+
+Tüm işlemler bu service katmanından geçsin.
+
+İleride localStorage yerine API koymak kolay olsun.
+
+---
+
+# 26. ROUTING
+
+Admin route yapısı:
+
+```text
+/admin/login
+
+/admin
+/admin/users
+/admin/users/:id
+
+/admin/moderation
+/admin/content
+/admin/confessions
+
+/admin/challenges
+/admin/rewards
+
+/admin/premium
+
+/admin/analytics
+
+/admin/announcements
+
+/admin/businesses
+
+/admin/cadde54
+
+/admin/settings
+
+/admin/admins
+```
+
+Protected routes kullan.
+
+---
+
+# 27. RESPONSIVE
+
+Desktop:
+
+```text
+Sidebar + Content
+```
+
+Tablet:
+
+```text
+Dar sidebar
+```
+
+Mobil:
+
+```text
+Hamburger menu
+Full width content
+```
+
+Tablolar mobilde yatay scroll edebilsin.
+
+---
+
+# 28. UX KURALLARI
+
+Kesinlikle:
+
+* Ölü buton bırakma.
+* "Coming soon" yazma.
+* Çalışmayan buton bırakma.
+* Her buton bir işlem yapsın.
+* Loading state kullan.
+* Empty state kullan.
+* Error state kullan.
+* Confirmation modal kullan.
+* Toast kullan.
+* Form validation kullan.
+
+Örneğin kullanıcı silmeye basınca direkt silme.
+
+Önce:
+
+```text
+Bu kullanıcıyı silmek istediğinize emin misiniz?
+```
+
+modalı açılsın.
+
+---
+
+# 29. GÜVENLİK
+
+Frontend demo olduğu için gerçek güvenlik beklenmiyor ancak mimariyi production'a uygun hazırla.
+
+Admin:
+
+```text
+isAdmin
+role
+permissions
+```
+
+mantığı kullan.
+
+Şifreleri gerçek production ortamında frontend/localStorage'da tutmanın güvenli olmadığını kod yorumlarında belirt.
+
+Backend geldiğinde:
+
+```text
+JWT
+HTTP-only cookie
+Role based authorization
+```
+
+kullanılabilecek şekilde tasarla.
+
+---
+
+# 30. ANA HEDEF
+
+Bu panel basit bir CRUD paneli gibi görünmemeli.
+
+Gerçek bir sosyal medya platformunun operasyon paneli gibi hissettirmeli.
+
+Admin uygulamaya girdiğinde tek ekranda şunu anlayabilmeli:
+
+```text
+Kaç kullanıcı var?
+Kaç kişi aktif?
+Kaç Premium var?
+Ne kadar gelir var?
+Bugün ne kadar içerik üretildi?
+Kaç kişi Cadde54'te?
+Kaç şikayet var?
+En aktif kullanıcılar kim?
+Sistem düzgün çalışıyor mu?
+```
+
+Bütün bunları hızlıca görebilmeli.
+
+---
+
+# 31. SON KONTROL
+
+Kodlamayı tamamladıktan sonra:
+
+```bash
+npm install
+npm run dev
+npm run build
+```
+
+komutlarını çalıştır.
+
+TypeScript hatalarını düzelt.
+
+Console error bırakma.
+
+Broken route bırakma.
+
+Responsive problemleri düzelt.
+
+Bütün sidebar linklerini tek tek test et.
+
+Bütün modal ve butonların çalıştığını kontrol et.
+
+Admin login → Dashboard → Users → User Detail → Moderation → Challenges → Premium → Analytics → Settings akışını tamamen test et.
+
+**Önemli:** Mevcut Cadde54 Vibe kullanıcı uygulamasını bozma. Admin panelini mevcut projeye entegre ederken mevcut kullanıcı tarafındaki özellikleri ve tasarımı kırma.

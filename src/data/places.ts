@@ -1,0 +1,16 @@
+export const PLACES = [
+  'Cadde 54',
+  'Bağdat Caddesi',
+  'Caddebostan Sahil',
+  'Suadiye',
+  'Bostancı İskele',
+  'Kadıköy Çarşı',
+  'Moda Sahil',
+  'Fenerbahçe Parkı',
+  'Göztepe Özgürlük Parkı',
+  'Kalamış',
+  'Neon Brew',
+  '54 Burger Lab',
+  'Street Archive',
+  'Luna Sinema',
+]

@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "Outfit", ui-sans-serif, sans-serif;
+  --color-ink: #050505;
+  --color-ink-2: #0a0a0a;
+  --color-panel: #111111;
+  --color-panel-2: #1a1a1a;
+  --color-line: #2e2e2e;
+  --color-mute: #a3a3a3;
+  --color-hot: #22c55e;
+  --color-violet: #16a34a;
+  --color-mint: #4ade80;
+  --color-gold: #ffffff;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: #050505;
+  color: #ffffff;
+  overscroll-behavior-y: contain;
+}
+
+body {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2e2e2e;
+  border-radius: 999px;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.glass {
+  background: rgba(10, 10, 10, 0.78);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.gradient-text {
+  background: linear-gradient(120deg, #ffffff 0%, #4ade80 50%, #22c55e 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.safe-b {
+  padding-bottom: calc(3.25rem + env(safe-area-inset-bottom));
+}
+
+@keyframes pop-like {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.28); }
+  100% { transform: scale(1); }
+}
+
+@keyframes xp-rise {
+  0% { opacity: 0; transform: translateY(12px) scale(0.9); }
+  20% { opacity: 1; transform: translateY(0) scale(1); }
+  80% { opacity: 1; transform: translateY(-8px) scale(1); }
+  100% { opacity: 0; transform: translateY(-28px) scale(0.96); }
+}
+
+@keyframes fade-up {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sheet-up {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+@keyframes backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.anim-like {
+  animation: pop-like 0.35s ease;
+}
+
+.anim-xp {
+  animation: xp-rise 1.6s ease forwards;
+}
+
+.anim-page {
+  animation: fade-up 0.28s ease;
+}
+
+.anim-sheet {
+  animation: sheet-up 0.28s ease;
+}
+
+.anim-backdrop {
+  animation: backdrop-in 0.2s ease;
+}
+
+@keyframes ig-heart {
+  0% { opacity: 0; transform: scale(0.25); }
+  22% { opacity: 1; transform: scale(1.28); }
+  55% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.08) translateY(-14px); }
+}
+
+.anim-ig-heart {
+  animation: ig-heart 0.65s ease forwards;
+}
