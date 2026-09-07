@@ -1,5 +1,5 @@
-import { Camera, ChevronLeft, MessageCircle, MoreVertical, Music2, Plus, Volume2, VolumeX } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { Camera, ChevronLeft, MessageCircle, MoreVertical, Music2, Plus, X } from 'lucide-react'
+import { useEffect, useRef, useState, type PointerEvent } from 'react'
 import { useParams } from 'react-router-dom'
 import { Link, useNavigate } from '../lib/nav'
 import { CommentSheet } from '../components/ui/CommentSheet'
@@ -12,46 +12,45 @@ import { Avatar } from '../components/ui/Avatar'
 import { ReelMenuSheet } from '../components/feed/ReelMenuSheet'
 import { goBack } from '../components/layout/BackButton'
 import { startCreate } from '../lib/createPicker'
-import { useApp } from '../hooks/useApp'
-import { formatCount } from '../lib/utils'
+import { cx, formatCount } from '../lib/utils'
 import { postService } from '../services/postService'
 import { isBoosted } from '../services/boostService'
 import { reelsService } from '../services/reelsService'
 import { settingsService } from '../services/settingsService'
 import { userService } from '../services/userService'
+import { useAuthStore } from '../store/authStore'
 import type { Reel } from '../types'
 
 export function ReelsPage() {
-  const { user, refresh } = useApp()
+  const user = useAuthStore((s) => s.user)
   const { id } = useParams()
+  const [rev, setRev] = useState(0)
+  const [active, setActive] = useState(0)
+  const [muted, setMuted] = useState(true)
+  const [holding, setHolding] = useState(false)
+  const navigate = useNavigate()
+  const scroller = useRef<HTMLDivElement>(null)
+  void rev
+
   const all = reelsService.list().filter((r) => !user || settingsService.visibleTo(user.id, r.userId))
   const start = id ? all.findIndex((r) => r.id === id) : 0
   const reels = start > 0 ? [...all.slice(start), ...all.slice(0, start)] : all
-  const [muted, setMuted] = useState(true)
-  const [muteFlash, setMuteFlash] = useState(false)
-  const [flashMuted, setFlashMuted] = useState(true)
-  const navigate = useNavigate()
-  const scroller = useRef<HTMLDivElement>(null)
-  const flashTimer = useRef(0)
 
   useEffect(() => {
+    setActive(0)
     scroller.current?.scrollTo({ top: 0 })
   }, [id])
-
-  function toggleMute() {
-    const next = !muted
-    setMuted(next)
-    setFlashMuted(next)
-    setMuteFlash(true)
-    window.clearTimeout(flashTimer.current)
-    flashTimer.current = window.setTimeout(() => setMuteFlash(false), 700)
-  }
 
   if (!user) return null
 
   return (
-    <div className="relative h-dvh bg-black lg:pl-0">
-      <div className="safe-topbar pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/55 to-transparent px-2">
+    <div className="relative h-dvh overflow-hidden bg-black lg:pl-0">
+      <div
+        className={cx(
+          'safe-topbar pointer-events-none absolute inset-x-0 top-0 z-20 flex items-center justify-between bg-gradient-to-b from-black/55 to-transparent px-2 transition-opacity duration-150',
+          holding && 'opacity-0',
+        )}
+      >
         <div className="pointer-events-auto flex items-center">
           <button
             type="button"
@@ -72,20 +71,27 @@ export function ReelsPage() {
           <Camera className="h-6 w-6" />
         </button>
       </div>
-      {muteFlash ? (
-        <div className="pointer-events-none absolute top-1/2 left-1/2 z-30 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full bg-black/45">
-          {flashMuted ? <VolumeX className="h-8 w-8" /> : <Volume2 className="h-8 w-8" />}
-        </div>
-      ) : null}
-      <div ref={scroller} className="h-full snap-y snap-mandatory overflow-y-auto no-scrollbar">
-        {reels.map((reel) => (
+      <div
+        ref={scroller}
+        className="h-full snap-y snap-mandatory overflow-y-auto no-scrollbar"
+        onScroll={(e) => {
+          const el = e.currentTarget
+          const next = Math.round(el.scrollTop / Math.max(el.clientHeight, 1))
+          setActive((cur) => (cur === next ? cur : next))
+        }}
+      >
+        {reels.map((reel, i) => (
           <ReelSlide
             key={reel.id}
             reel={reel}
             meId={user.id}
             muted={muted}
-            onMute={toggleMute}
-            onChange={refresh}
+            active={i === active}
+            near={Math.abs(i - active) <= 1}
+            holding={holding && i === active}
+            onHoldChange={setHolding}
+            onUnmute={() => setMuted(false)}
+            onChange={() => setRev((n) => n + 1)}
           />
         ))}
       </div>
@@ -97,23 +103,34 @@ function ReelSlide({
   reel,
   meId,
   muted,
-  onMute,
+  active,
+  near,
+  holding,
+  onHoldChange,
+  onUnmute,
   onChange,
 }: {
   reel: Reel
   meId: string
   muted: boolean
-  onMute: () => void
+  active: boolean
+  near: boolean
+  holding: boolean
+  onHoldChange: (on: boolean) => void
+  onUnmute: () => void
   onChange: () => void
 }) {
   const ref = useRef<HTMLVideoElement>(null)
-  const wrap = useRef<HTMLElement>(null)
   const lastTap = useRef(0)
   const tapTimer = useRef(0)
+  const holdTimer = useRef(0)
+  const gesture = useRef<'none' | 'hold' | 'scroll'>('none')
+  const origin = useRef({ x: 0, y: 0 })
   const [open, setOpen] = useState(false)
   const [likersOpen, setLikersOpen] = useState(false)
   const [shareOpen, setShareOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [paused, setPaused] = useState(false)
   const [url, setUrl] = useState(reel.videoUrl)
   const [burst, setBurst] = useState(false)
   const author = userService.getById(reel.userId)
@@ -141,19 +158,29 @@ function ReelSlide({
   }, [reel])
 
   useEffect(() => {
+    if (active) return
+    setPaused(false)
+    onHoldChange(false)
+    gesture.current = 'none'
+    window.clearTimeout(holdTimer.current)
+    window.clearTimeout(tapTimer.current)
+  }, [active, onHoldChange])
+
+  useEffect(() => {
     const video = ref.current
-    const node = wrap.current
-    if (!video || !node) return
-    const io = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) void video.play().catch(() => undefined)
-        else video.pause()
-      },
-      { threshold: 0.7 },
-    )
-    io.observe(node)
-    return () => io.disconnect()
-  }, [url])
+    if (!video || !near) return
+    video.setAttribute('playsinline', 'true')
+    video.setAttribute('webkit-playsinline', 'true')
+    if (active && !paused && !holding) void video.play().catch(() => undefined)
+    else video.pause()
+  }, [active, paused, holding, near, url])
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(holdTimer.current)
+      window.clearTimeout(tapTimer.current)
+    }
+  }, [])
 
   function like() {
     if (!liked) {
@@ -164,7 +191,53 @@ function ReelSlide({
     window.setTimeout(() => setBurst(false), 650)
   }
 
-  function onVideoClick() {
+  function play() {
+    setPaused(false)
+    onUnmute()
+    void ref.current?.play().catch(() => undefined)
+  }
+
+  function pause() {
+    setPaused(true)
+    ref.current?.pause()
+  }
+
+  function onPointerDown(e: PointerEvent) {
+    if (!active || e.button !== 0) return
+    gesture.current = 'none'
+    origin.current = { x: e.clientX, y: e.clientY }
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = 0
+      gesture.current = 'hold'
+      onHoldChange(true)
+      ref.current?.pause()
+    }, 140)
+  }
+
+  function onPointerMove(e: PointerEvent) {
+    if (Math.hypot(e.clientX - origin.current.x, e.clientY - origin.current.y) < 12) return
+    window.clearTimeout(holdTimer.current)
+    holdTimer.current = 0
+    if (gesture.current === 'hold') {
+      onHoldChange(false)
+      if (active && !paused) void ref.current?.play().catch(() => undefined)
+    }
+    gesture.current = 'scroll'
+  }
+
+  function onPointerUp() {
+    window.clearTimeout(holdTimer.current)
+    holdTimer.current = 0
+    if (gesture.current === 'hold') {
+      gesture.current = 'none'
+      onHoldChange(false)
+      if (!paused) play()
+      return
+    }
+    if (gesture.current === 'scroll') {
+      gesture.current = 'none'
+      return
+    }
     const now = Date.now()
     if (now - lastTap.current < 280) {
       window.clearTimeout(tapTimer.current)
@@ -175,20 +248,48 @@ function ReelSlide({
     lastTap.current = now
     window.clearTimeout(tapTimer.current)
     tapTimer.current = window.setTimeout(() => {
-      if (lastTap.current === now) onMute()
-    }, 280)
+      if (lastTap.current !== now) return
+      if (paused) play()
+      else pause()
+    }, 260)
+  }
+
+  function onPointerCancel() {
+    window.clearTimeout(holdTimer.current)
+    holdTimer.current = 0
+    if (gesture.current === 'hold') {
+      onHoldChange(false)
+      if (!paused) play()
+    }
+    gesture.current = 'none'
   }
 
   return (
-    <section ref={wrap} className="relative h-dvh w-full snap-start">
-      <video
-        ref={ref}
-        src={url}
-        className="h-full w-full object-cover"
-        loop
-        playsInline
-        muted={muted}
-        onClick={onVideoClick}
+    <section className="relative h-dvh w-full snap-start snap-always">
+      {near ? (
+        <video
+          ref={ref}
+          src={url}
+          className="h-full w-full object-cover [transform:translateZ(0)]"
+          loop
+          playsInline
+          muted={muted}
+          preload={active ? 'auto' : 'metadata'}
+          disablePictureInPicture
+          disableRemotePlayback
+          controls={false}
+        />
+      ) : (
+        <div className="h-full w-full bg-black" />
+      )}
+      <div
+        className="absolute inset-0 z-[5] touch-pan-y select-none"
+        style={{ WebkitTouchCallout: 'none' }}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
       />
       {burst ? (
         <span className="pointer-events-none absolute inset-0 z-20 grid place-items-center text-[88px] leading-none anim-ig-heart">
@@ -196,9 +297,45 @@ function ReelSlide({
         </span>
       ) : null}
 
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 to-transparent" />
+      {paused && !holding ? (
+        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center">
+          <div className="reel-pause-in pointer-events-auto flex flex-col items-center">
+            <button
+              type="button"
+              aria-label="Kapat"
+              onClick={play}
+              className="mb-5 grid h-10 w-10 place-items-center rounded-full bg-black/45"
+            >
+              <X className="h-6 w-6" strokeWidth={2.4} />
+            </button>
+            <button
+              type="button"
+              aria-label="Oynat"
+              onClick={play}
+              className="grid h-[72px] w-[72px] place-items-center"
+            >
+              <span className="flex gap-[7px]">
+                <span className="h-9 w-[9px] rounded-[2px] bg-white shadow" />
+                <span className="h-9 w-[9px] rounded-[2px] bg-white shadow" />
+              </span>
+            </button>
+          </div>
+        </div>
+      ) : null}
 
-      <div className="absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 px-3 pb-[calc(3.35rem+env(safe-area-inset-bottom))] lg:pb-[max(1.1rem,env(safe-area-inset-bottom))]">
+      <div
+        className={cx(
+          'pointer-events-none absolute inset-x-0 bottom-0 h-48 bg-gradient-to-t from-black/80 to-transparent transition-opacity duration-150',
+          holding && 'opacity-0',
+        )}
+      />
+
+      <div
+        className={cx(
+          'absolute inset-x-0 bottom-0 z-10 flex items-end justify-between gap-3 px-3 pb-[calc(3.35rem+env(safe-area-inset-bottom))] transition-opacity duration-150 lg:pb-[max(1.1rem,env(safe-area-inset-bottom))]',
+          holding && 'pointer-events-none opacity-0',
+        )}
+      >
         <div className="min-w-0 flex-1 pb-1 pr-1">
           <div className="flex items-center gap-2">
             <Link to={`/u/${author?.username}`} className="flex min-w-0 items-center gap-2">
@@ -226,7 +363,7 @@ function ReelSlide({
           <div className="mt-2 flex max-w-[72%] items-center gap-1.5 overflow-hidden text-[13px] text-white/90">
             <Music2 className="h-3.5 w-3.5 shrink-0" />
             <span className="min-w-0 overflow-hidden whitespace-nowrap">
-              <span className="reel-marquee">
+              <span className={cx('reel-marquee', (paused || holding || muted) && '[animation-play-state:paused]')}>
                 {reel.music} · {author?.username ?? ''} · {reel.music} · {author?.username ?? ''} ·
               </span>
             </span>
@@ -292,7 +429,7 @@ function ReelSlide({
 
           <div
             className="reel-disc grid h-10 w-10 place-items-center overflow-hidden rounded-full border-2 border-white/90 bg-black"
-            style={muted ? { animationPlayState: 'paused' } : undefined}
+            style={paused || holding || muted ? { animationPlayState: 'paused' } : undefined}
           >
             {author?.avatar ? (
               <img src={author.avatar} alt="" className="h-6 w-6 rounded-full object-cover" />

@@ -149,6 +149,15 @@ body {
   animation: ig-heart 0.65s ease forwards;
 }
 
+@keyframes reel-pause-pop {
+  from { opacity: 0; transform: scale(0.86); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.reel-pause-in {
+  animation: reel-pause-pop 0.16s ease-out;
+}
+
 @keyframes reel-spin {
   to { transform: rotate(360deg); }
 }
