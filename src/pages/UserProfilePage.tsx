@@ -93,6 +93,26 @@ export function UserProfilePage() {
         postCount={posts.length}
         here={here}
         locked={targetSettings.privateAccount}
+        followersTo={
+          settingsService.canSeeFollowers(target.id, user.id)
+            ? `/friends?tab=followers&u=${target.username}`
+            : undefined
+        }
+        followingTo={
+          settingsService.canSeeFollowing(target.id, user.id)
+            ? `/friends?tab=following&u=${target.username}`
+            : undefined
+        }
+        onFollowersClick={
+          settingsService.canSeeFollowers(target.id, user.id)
+            ? undefined
+            : () => toast('Takipçiler gizli', 'info')
+        }
+        onFollowingClick={
+          settingsService.canSeeFollowing(target.id, user.id)
+            ? undefined
+            : () => toast('Takip listesi gizli', 'info')
+        }
         badges={
           locked ? null : (
             <div className="mt-2 space-y-1">

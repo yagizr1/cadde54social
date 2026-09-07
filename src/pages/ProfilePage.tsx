@@ -68,7 +68,8 @@ export function ProfilePage() {
         user={user}
         postCount={posts.length}
         here={here}
-        linkStats
+        followersTo="/friends?tab=followers"
+        followingTo="/friends?tab=following"
         badges={
           <div className="mt-3">
             <div className="flex items-center justify-between text-[11px] text-mute">

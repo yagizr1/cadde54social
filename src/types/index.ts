@@ -8,6 +8,10 @@ export interface User {
   xp: number
   followers: string[]
   following: string[]
+  followerCount?: number
+  followingCount?: number
+  hideFollowers?: boolean
+  hideFollowing?: boolean
   isPremium: boolean
   premiumPlan?: 'month' | 'half' | 'year' | 'lifetime'
   premiumUntil?: number | null
@@ -273,6 +277,8 @@ export interface UserSettings {
   privateAccount: boolean
   hideHereStatus: boolean
   hideLikes: boolean
+  hideFollowers: boolean
+  hideFollowing: boolean
   ghostMode: boolean
   allowMessages: MessagePrivacy
   allowComments: AudiencePrivacy

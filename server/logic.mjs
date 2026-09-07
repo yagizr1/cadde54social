@@ -189,6 +189,8 @@ function settingsOf(db, userId) {
     privateAccount: false,
     hideHereStatus: false,
     hideLikes: false,
+    hideFollowers: false,
+    hideFollowing: false,
     ghostMode: false,
     allowMessages: 'everyone',
     allowComments: 'everyone',
@@ -376,12 +378,20 @@ export function snapshot(db, meId) {
     return false
   }
   const present = (u) => {
+    const prefs = settingsOf(db, u.id)
     const row = adminView ? u : publicUser(u, meId)
-    if (adminView) return row
+    const followers = (row.followers ?? []).filter((id) => adminView || !staff.has(id))
+    const following = (row.following ?? []).filter((id) => adminView || !staff.has(id))
+    const hideFollowers = Boolean(prefs.hideFollowers) && u.id !== meId && !adminView
+    const hideFollowing = Boolean(prefs.hideFollowing) && u.id !== meId && !adminView
     return {
       ...row,
-      followers: (row.followers ?? []).filter((id) => !staff.has(id)),
-      following: (row.following ?? []).filter((id) => !staff.has(id)),
+      hideFollowers: Boolean(prefs.hideFollowers),
+      hideFollowing: Boolean(prefs.hideFollowing),
+      followerCount: followers.length,
+      followingCount: following.length,
+      followers: hideFollowers ? [] : followers,
+      following: hideFollowing ? [] : following,
     }
   }
   return {

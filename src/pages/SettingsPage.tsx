@@ -384,6 +384,8 @@ function PrivacySection() {
     <Shell title="Gizlilik">
       <div className="space-y-4 rounded-3xl border border-line bg-panel p-4">
         <Row title="Gizli hesap" text="Takip etmeyenler içeriğini sınırlı görür." on={settings.privateAccount} onChange={(v) => set('privateAccount', v)} />
+        <Row title="Takipçileri gizle" text="Başkaları takipçi listeni açamaz." on={settings.hideFollowers} onChange={(v) => set('hideFollowers', v)} />
+        <Row title="Takip edilenleri gizle" text="Başkaları kimi takip ettiğini göremez." on={settings.hideFollowing} onChange={(v) => set('hideFollowing', v)} />
         <Row title="Buradayım’ı gizle" text="Cadde 54’te yazısı başkalarına görünmez." on={settings.hideHereStatus} onChange={(v) => set('hideHereStatus', v)} />
         <Row title="Beğeni sayısını gizle" text="Gönderilerindeki beğeni sayısı gizlenir." on={settings.hideLikes} onChange={(v) => set('hideLikes', v)} />
         <Row

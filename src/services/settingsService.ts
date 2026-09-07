@@ -9,6 +9,8 @@ const defaults = (userId: string): UserSettings => ({
   privateAccount: false,
   hideHereStatus: false,
   hideLikes: false,
+  hideFollowers: false,
+  hideFollowing: false,
   ghostMode: false,
   allowMessages: 'everyone',
   allowComments: 'everyone',
@@ -44,6 +46,16 @@ function blockedBy(): string[] {
   return getItem<string[]>('blockedBy', [])
 }
 
+function publicFlags(userId: string): { hideFollowers: boolean; hideFollowing: boolean } {
+  const user = getItem<{ id: string; hideFollowers?: boolean; hideFollowing?: boolean }[]>('users', []).find(
+    (u) => u.id === userId,
+  )
+  return {
+    hideFollowers: Boolean(user?.hideFollowers),
+    hideFollowing: Boolean(user?.hideFollowing),
+  }
+}
+
 export const settingsService = {
   get(userId: string): UserSettings {
     const found = all().find((s) => s.userId === userId)
@@ -53,7 +65,8 @@ export const settingsService = {
       blockedIds = [...blockedIds, me]
     }
     if (!found) {
-      return { ...defaults(userId), blockedIds }
+      const flags = publicFlags(userId)
+      return { ...defaults(userId), blockedIds, hideFollowers: flags.hideFollowers, hideFollowing: flags.hideFollowing }
     }
     return {
       ...defaults(userId),
@@ -61,6 +74,8 @@ export const settingsService = {
       blockedIds,
       mutedIds: found.mutedIds ?? [],
       hiddenWords: found.hiddenWords ?? [],
+      hideFollowers: Boolean(found.hideFollowers ?? publicFlags(userId).hideFollowers),
+      hideFollowing: Boolean(found.hideFollowing ?? publicFlags(userId).hideFollowing),
     }
   },
 
@@ -72,6 +87,18 @@ export const settingsService = {
     if (idx >= 0) list[idx] = next
     else list.push(next)
     setItem('settings', list)
+    if (patch.hideFollowers !== undefined || patch.hideFollowing !== undefined) {
+      const users = getItem<{ id: string; hideFollowers?: boolean; hideFollowing?: boolean }[]>('users', [])
+      const idx = users.findIndex((u) => u.id === userId)
+      if (idx >= 0) {
+        users[idx] = {
+          ...users[idx],
+          hideFollowers: next.hideFollowers,
+          hideFollowing: next.hideFollowing,
+        }
+        setItem('users', users)
+      }
+    }
     if (patch.showInMeet !== undefined) {
       userService.update(userId, { showInMeet: patch.showInMeet })
     }
@@ -95,6 +122,16 @@ export const settingsService = {
   visibleTo(meId: string, otherId: string): boolean {
     if (!meId || !otherId || meId === otherId) return true
     return !this.iBlocked(otherId, meId)
+  },
+
+  canSeeFollowers(ownerId: string, viewerId: string): boolean {
+    if (!viewerId || ownerId === viewerId) return true
+    return !this.get(ownerId).hideFollowers
+  },
+
+  canSeeFollowing(ownerId: string, viewerId: string): boolean {
+    if (!viewerId || ownerId === viewerId) return true
+    return !this.get(ownerId).hideFollowing
   },
 
   canMessage(fromId: string, toId: string): { ok: boolean; reason?: string } {

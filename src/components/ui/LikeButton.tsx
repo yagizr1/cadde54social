@@ -13,7 +13,7 @@ export function LikeButton({
   pop?: boolean
   size?: 'sm' | 'md' | 'lg'
 }) {
-  const box = size === 'lg' ? 'h-11 w-11' : size === 'sm' ? 'h-8 w-8' : 'h-10 w-10'
+  const box = size === 'lg' ? 'h-11 w-11' : size === 'sm' ? 'h-8 w-8' : 'h-11 w-11'
   const icon = size === 'lg' ? 'h-7 w-7' : size === 'sm' ? 'h-5 w-5' : 'h-6 w-6'
 
   return (

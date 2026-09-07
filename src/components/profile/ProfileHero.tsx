@@ -9,10 +9,12 @@ function Stat({
   value,
   label,
   to,
+  onClick,
 }: {
   value: number
   label: string
   to?: string
+  onClick?: () => void
 }) {
   const inner = (
     <>
@@ -27,6 +29,13 @@ function Stat({
       </Link>
     )
   }
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className="min-w-[56px] text-center">
+        {inner}
+      </button>
+    )
+  }
   return <div className="min-w-[56px] text-center">{inner}</div>
 }
 
@@ -38,7 +47,10 @@ export function ProfileHero({
   badges,
   insights,
   actions,
-  linkStats,
+  followersTo,
+  followingTo,
+  onFollowersClick,
+  onFollowingClick,
 }: {
   user: User
   postCount: number
@@ -47,7 +59,10 @@ export function ProfileHero({
   badges?: ReactNode
   insights?: ReactNode
   actions: ReactNode
-  linkStats?: boolean
+  followersTo?: string
+  followingTo?: string
+  onFollowersClick?: () => void
+  onFollowingClick?: () => void
 }) {
   const openStories = useUiStore((s) => s.openStories)
   const hasStory = storyService.grouped().some((g) => g.userId === user.id && g.stories.length)
@@ -69,14 +84,16 @@ export function ProfileHero({
         <div className="flex min-w-0 flex-1 justify-around">
           <Stat value={postCount} label="gönderi" />
           <Stat
-            value={user.followers.length}
+            value={user.followerCount ?? user.followers.length}
             label="takipçi"
-            to={linkStats ? '/friends?tab=followers' : undefined}
+            to={followersTo}
+            onClick={onFollowersClick}
           />
           <Stat
-            value={user.following.length}
+            value={user.followingCount ?? user.following.length}
             label="takip"
-            to={linkStats ? '/friends?tab=following' : undefined}
+            to={followingTo}
+            onClick={onFollowingClick}
           />
         </div>
       </div>

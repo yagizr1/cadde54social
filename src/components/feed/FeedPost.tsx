@@ -151,48 +151,36 @@ export function FeedPost({
           </span>
         ) : null}
       </button>
-      <div className="flex items-start justify-between px-1 pt-1">
-        <div className="flex items-start">
-          <div className="flex w-11 flex-col items-center">
-            <LikeButton
-              liked={liked}
-              pop={pop}
-              onClick={() => {
-                postService.toggleLike(post.id, meId, post.userId)
-                if (!liked) pulse()
-                onChange()
-              }}
-            />
-            {likesHidden ? null : (
-              <button
-                type="button"
-                className="pb-1 text-[11px] font-semibold leading-none"
-                onClick={() => setLikersOpen(true)}
-              >
-                {formatCount(post.likes.length)}
-              </button>
-            )}
-          </div>
-          <div className="flex w-11 flex-col items-center">
-            <button
-              className="grid h-11 w-11 place-items-center"
-              onClick={() => {
-                if (post.commentsOff && meId !== post.userId) {
-                  toast('Yorumlar kapalı', 'err')
-                  return
-                }
-                const gate = settingsService.canComment(meId, post.userId)
-                if (meId !== post.userId && !gate.ok) {
-                  toast(gate.reason ?? 'Yorum yapılamaz', 'err')
-                  return
-                }
-                setCommentsOpen(true)
-              }}
-            >
-              <MessageCircle className="h-6 w-6" />
-            </button>
-            <span className="pb-1 text-[11px] font-semibold leading-none">{formatCount(visibleComments.length)}</span>
-          </div>
+      <div className="flex h-11 items-center justify-between px-1 pt-1">
+        <div className="flex h-11 items-center">
+          <LikeButton
+            liked={liked}
+            pop={pop}
+            className="h-11 w-11"
+            onClick={() => {
+              postService.toggleLike(post.id, meId, post.userId)
+              if (!liked) pulse()
+              onChange()
+            }}
+          />
+          <button
+            type="button"
+            className="grid h-11 w-11 place-items-center"
+            onClick={() => {
+              if (post.commentsOff && meId !== post.userId) {
+                toast('Yorumlar kapalı', 'err')
+                return
+              }
+              const gate = settingsService.canComment(meId, post.userId)
+              if (meId !== post.userId && !gate.ok) {
+                toast(gate.reason ?? 'Yorum yapılamaz', 'err')
+                return
+              }
+              setCommentsOpen(true)
+            }}
+          >
+            <MessageCircle className="h-6 w-6" />
+          </button>
           <QuickShareButton
             meId={meId}
             onOpenSheet={() => setShareOpen(true)}
@@ -220,6 +208,7 @@ export function FeedPost({
           ) : null}
         </div>
         <button
+          type="button"
           className="grid h-11 w-11 place-items-center"
           onClick={() => {
             postService.toggleSave(post.id, meId)
@@ -232,9 +221,9 @@ export function FeedPost({
       </div>
       <div className="px-3">
         {likesHidden ? (
-          <p className="text-[14px] font-semibold">Beğeniler gizli</p>
+          <p className="block text-[14px] font-semibold">Beğeniler gizli</p>
         ) : (
-          <button type="button" className="text-[14px] font-semibold" onClick={() => setLikersOpen(true)}>
+          <button type="button" className="block text-[14px] font-semibold" onClick={() => setLikersOpen(true)}>
             {formatCount(post.likes.length)} beğeni
           </button>
         )}
@@ -247,9 +236,9 @@ export function FeedPost({
           </p>
         ) : null}
         {post.commentsOff && meId !== post.userId ? (
-          <p className="mt-1 text-[14px] text-mute">Yorumlar kapalı</p>
+          <p className="mt-1 block text-[14px] text-mute">Yorumlar kapalı</p>
         ) : visibleComments.length > 0 ? (
-          <button className="mt-1 text-[14px] text-mute" onClick={() => setCommentsOpen(true)}>
+          <button type="button" className="mt-1 block text-left text-[14px] text-mute" onClick={() => setCommentsOpen(true)}>
             {visibleComments.length} yorumun tümünü gör
           </button>
         ) : null}
