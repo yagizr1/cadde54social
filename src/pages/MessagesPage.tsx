@@ -10,6 +10,7 @@ import { timeAgo } from '../lib/utils'
 import { messageService } from '../services/messageService'
 import { settingsService } from '../services/settingsService'
 import { userService } from '../services/userService'
+import { liveTypingIn } from '../store/liveStore'
 import { useUiStore } from '../store/uiStore'
 import type { User } from '../types'
 
@@ -205,7 +206,7 @@ export function MessagesPage() {
         </div>
       ) : (
         <div>
-          {rows.map(({ c, other, last, unread }) => (
+          {rows.map(({ c, other, otherId, last, unread }) => (
             <ConvoRow
               key={c.id}
               id={c.id}
@@ -217,12 +218,15 @@ export function MessagesPage() {
               avatar={other?.avatar ?? ''}
               here={other ? settingsService.isHereVisible(other.id, other.hereUntil, user.id) : false}
               preview={
-                last
-                  ? `${last.senderId === user.id ? 'Sen: ' : ''}${
-                      last.viewOnce ? 'Fotoğraf' : last.text || (last.image ? 'Fotoğraf' : 'Mesaj')
-                    }`
-                  : 'Yeni sohbet'
+                liveTypingIn(c.id, otherId)
+                  ? 'Yazıyor...'
+                  : last
+                    ? `${last.senderId === user.id ? 'Sen: ' : ''}${
+                        last.viewOnce ? 'Fotoğraf' : last.text || (last.image ? 'Fotoğraf' : 'Mesaj')
+                      }`
+                    : 'Yeni sohbet'
               }
+              typing={liveTypingIn(c.id, otherId)}
               time={last ? timeAgo(last.createdAt) : ''}
               unread={unread}
             />
@@ -245,6 +249,7 @@ function ConvoRow({
   preview,
   time,
   unread,
+  typing,
 }: {
   id: string
   selecting: boolean
@@ -257,6 +262,7 @@ function ConvoRow({
   preview: string
   time: string
   unread: boolean
+  typing?: boolean
 }) {
   const navigate = useNavigate()
   const press = useLongPress(() => {
@@ -287,10 +293,10 @@ function ConvoRow({
         )}
         <div className="min-w-0 flex-1">
           <p className={`truncate text-[15px] ${unread ? 'font-semibold' : 'font-normal'}`}>{username}</p>
-          <p className={`truncate text-[14px] ${unread ? 'font-medium text-white' : 'text-[#a8a8a8]'}`}>
-            {here ? 'Cadde 54’te · ' : ''}
+          <p className={`truncate text-[14px] ${typing ? 'font-medium text-hot' : unread ? 'font-medium text-white' : 'text-[#a8a8a8]'}`}>
+            {typing ? null : here ? 'Cadde 54’te · ' : ''}
             {preview}
-            {time ? ` · ${time}` : ''}
+            {typing || !time ? '' : ` · ${time}`}
           </p>
         </div>
         {unread ? <span className="h-2 w-2 shrink-0 rounded-full bg-[#3797f0]" /> : null}

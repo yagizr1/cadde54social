@@ -60,6 +60,10 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,webmanifest}'],
         runtimeCaching: [
           {
+            urlPattern: /\/api\//,
+            handler: 'NetworkOnly',
+          },
+          {
             urlPattern: /^https:\/\/images\.unsplash\.com\/.*/i,
             handler: 'CacheFirst',
             options: {

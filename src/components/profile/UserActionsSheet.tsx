@@ -1,5 +1,5 @@
 import { Ban, BellOff, BellRing, Flag, Send } from 'lucide-react'
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { settingsService } from '../../services/settingsService'
 import { useUiStore } from '../../store/uiStore'
 import { profileSharePayload } from '../../services/shareService'
@@ -15,12 +15,14 @@ export function UserActionsSheet({
   meId,
   target,
   onChange,
+  extra,
 }: {
   open: boolean
   onClose: () => void
   meId: string
   target: User
   onChange: () => void
+  extra?: ReactNode
 }) {
   const toast = useUiStore((s) => s.toast)
   const [reportOpen, setReportOpen] = useState(false)
@@ -38,6 +40,7 @@ export function UserActionsSheet({
     <>
       <Sheet open={open && !reportOpen} onClose={closeAll} title={`@${target.username}`}>
         <div className="space-y-1">
+          {extra}
           <ActionRow
             icon={Send}
             label="Profili gönder"

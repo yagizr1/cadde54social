@@ -1,4 +1,5 @@
 import { loadDb, saveDb, uid, token } from './db.mjs'
+import { emitTo, emitToUsers, setTyping } from './live.mjs'
 import { dispatchPush } from './push.mjs'
 import { hashPassword, isHashed, verifyPassword } from './password.mjs'
 
@@ -839,6 +840,9 @@ export function runAction(meId, name, body = {}) {
       clearBoosts(db, meId, { kind: 'reel', id: reel.id })
       reel.boostedUntil = Date.now() + BOOST_DURATION_MS
     },
+    'reels.remove'() {
+      db.reels = db.reels.filter((r) => !(r.id === body.reelId && r.userId === meId))
+    },
     'confessions.create'() {
       db.confessions.unshift({
         id: body.id || uid('cf'),
@@ -901,7 +905,7 @@ export function runAction(meId, name, body = {}) {
       if (!conv.participantIds.includes(meId)) throw new Error('Bu sohbete yazamazsın')
       const other = conv.participantIds.find((id) => id !== meId)
       if (other && blocked(db, meId, other)) throw new Error('Bu kullanıcıyla mesajlaşamazsın')
-      conv.messages.push({
+      const msg = {
         id: body.id || uid('m'),
         senderId: meId,
         text: body.text ?? '',
@@ -913,9 +917,17 @@ export function runAction(meId, name, body = {}) {
         createdAt: Date.now(),
         viewOnce: Boolean(body.viewOnce) || undefined,
         openedBy: [],
-      })
+      }
+      conv.messages.push(msg)
       conv.updatedAt = Date.now()
       delete conv.pendingRequestFor
+      setTyping(conv.id, meId, false)
+      emitToUsers(conv.participantIds, {
+        type: 'message',
+        conversationId: conv.id,
+        participantIds: conv.participantIds,
+        message: msg,
+      })
       if (other) {
         notify(db, {
           type: 'message',
@@ -927,6 +939,15 @@ export function runAction(meId, name, body = {}) {
           groupKey: `message:${conv.id}`,
         })
       }
+    },
+    'messages.typing'() {
+      const conv = db.conversations.find((c) => c.id === body.conversationId)
+      if (!conv || !conv.participantIds.includes(meId)) return
+      const other = conv.participantIds.find((id) => id !== meId)
+      if (other && blocked(db, meId, other)) return
+      const on = Boolean(body.typing)
+      setTyping(conv.id, meId, on)
+      if (other) emitTo(other, { type: 'typing', conversationId: conv.id, userId: meId, typing: on })
     },
     'messages.system'() {
       const conv = db.conversations.find((c) => c.id === body.conversationId)
@@ -955,7 +976,13 @@ export function runAction(meId, name, body = {}) {
       if (!conv || !conv.participantIds.includes(meId)) return
       const other = conv.participantIds.find((id) => id !== meId)
       if (other && blocked(db, meId, other)) return
-      conv.lastRead = { ...(conv.lastRead ?? {}), [meId]: Date.now() }
+      const at = Date.now()
+      conv.lastRead = { ...(conv.lastRead ?? {}), [meId]: at }
+      conv.updatedAt = at
+      emitToUsers(
+        conv.participantIds.filter((id) => id !== meId),
+        { type: 'read', conversationId: conv.id, userId: meId, at },
+      )
     },
     'messages.removeConversations'() {
       const hide = new Set(body.ids ?? [])
@@ -979,6 +1006,13 @@ export function runAction(meId, name, body = {}) {
         mine?.emoji === body.emoji
           ? reactions.filter((r) => r.userId !== meId)
           : [...reactions.filter((r) => r.userId !== meId), { userId: meId, emoji: body.emoji }]
+      conv.updatedAt = Date.now()
+      emitToUsers(conv.participantIds, {
+        type: 'react',
+        conversationId: conv.id,
+        messageId: msg.id,
+        reactions: msg.reactions,
+      })
     },
     'notifications.push'() {
       notify(db, {
@@ -1487,6 +1521,7 @@ export function runAction(meId, name, body = {}) {
   const fn = actions[name]
   if (!fn) throw new Error('Bilinmeyen işlem')
   fn()
+  if (name === 'messages.typing') return { okOnly: true }
   saveDb(db)
   return snapshot(db, meId)
 }

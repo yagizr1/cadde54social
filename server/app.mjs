@@ -18,6 +18,7 @@ import {
 import { mailReady, resetCodes, sendResetMail, sixDigit } from './passwordReset.mjs'
 import { clientKey, rateLimit } from './rateLimit.mjs'
 import { dispatchPush, pushPublicKey, removePushSubscription, savePushSubscription } from './push.mjs'
+import { subscribe, typingFor } from './live.mjs'
 
 loadEnv()
 
@@ -41,6 +42,17 @@ function bearer(req) {
 
 function auth(req, res, next) {
   const user = userFromToken(bearer(req))
+  if (!user) {
+    res.status(401).json({ error: 'Oturum gerekli' })
+    return
+  }
+  req.user = user
+  next()
+}
+
+function liveAuth(req, res, next) {
+  const q = String(req.query?.token ?? '')
+  const user = userFromToken(bearer(req) || q)
   if (!user) {
     res.status(401).json({ error: 'Oturum gerekli' })
     return
@@ -189,9 +201,55 @@ export function createApiApp() {
     res.json({ snapshot: snapshot(loadDb(), req.user.id), me: req.user })
   })
 
+  app.get('/api/chat/sync', auth, (req, res) => {
+    const since = Number(req.query.since) || 0
+    const db = loadDb()
+    const mine = db.conversations.filter((c) => c.participantIds.includes(req.user.id))
+    res.json({
+      now: Date.now(),
+      conversations: since ? mine.filter((c) => c.updatedAt > since) : mine,
+      typing: typingFor(req.user.id, mine),
+    })
+  })
+
+  app.get('/api/live', liveAuth, (req, res) => {
+    res.status(200)
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8')
+    res.setHeader('Cache-Control', 'no-cache, no-transform')
+    res.setHeader('Connection', 'keep-alive')
+    res.setHeader('X-Accel-Buffering', 'no')
+    if (typeof res.flushHeaders === 'function') res.flushHeaders()
+    req.socket.setTimeout(0)
+    req.socket.setNoDelay?.(true)
+    res.write(':ok\n\n')
+    const unsub = subscribe(req.user.id, {
+      write: (chunk) => {
+        res.write(chunk)
+        if (typeof res.flush === 'function') res.flush()
+      },
+    })
+    const ping = setInterval(() => {
+      try {
+        res.write(':ping\n\n')
+      } catch {
+        clearInterval(ping)
+      }
+    }, 15000)
+    const close = () => {
+      clearInterval(ping)
+      unsub()
+    }
+    req.on('close', close)
+    res.on('close', close)
+  })
+
   app.post('/api/actions/:name', auth, (req, res) => {
     try {
       const snap = runAction(req.user.id, req.params.name, req.body ?? {})
+      if (snap?.okOnly) {
+        res.json({ ok: true })
+        return
+      }
       res.json({ ok: true, snapshot: snap, me: snap.me })
     } catch (err) {
       fail(res, err)

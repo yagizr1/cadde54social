@@ -65,21 +65,26 @@ export function IosInstallGuide({
               <Row n={4}>Yeşil İndir yazısına bas</Row>
             </div>
           ) : (
-            <div className="mt-2 divide-y divide-white/10">
-              <Row n={1}>
-                En alttaki{' '}
-                <Share className="mx-0.5 inline h-5 w-5 text-hot" strokeWidth={2.4} />{' '}
-                kare ok düğmesine bas
-              </Row>
-              <Row n={2}>Açılan listeyi parmağınla aşağı kaydır</Row>
-              <Row n={3}>
-                <span className="font-semibold">Ana Ekrana Ekle</span> yazısına bas
-              </Row>
-              <Row n={4}>
-                Sağ üstteki <span className="font-semibold">Ekle</span> yazısına bas
-              </Row>
-              <Row n={5}>Uygulama indirildi. Telefondaki uygulamalar kısmından girebilirsin</Row>
-            </div>
+            <>
+              <div className="mt-2 divide-y divide-white/10">
+                <Row n={1}>
+                  En alttaki{' '}
+                  <Share className="mx-0.5 inline h-5 w-5 text-hot" strokeWidth={2.4} />{' '}
+                  kare ok düğmesine bas
+                </Row>
+                <Row n={2}>Açılan listeyi parmağınla aşağı kaydır</Row>
+                <Row n={3}>
+                  <span className="font-semibold">Ana Ekrana Ekle</span> yazısına bas
+                </Row>
+                <Row n={4}>
+                  Sağ üstteki <span className="font-semibold">Ekle</span> yazısına bas
+                </Row>
+                <Row n={5}>Uygulama indirildi. Telefondaki uygulamalar kısmından girebilirsin</Row>
+              </div>
+              <p className="mt-3 text-[13px] leading-snug text-mute">
+                Not: Safari’de Ana Ekrana Ekle çıkmıyorsa aynı adımları Google Chrome’dan yap.
+              </p>
+            </>
           )}
 
           <button

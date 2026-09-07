@@ -89,9 +89,16 @@ function ProfileTab() {
 
 export function BottomNav() {
   const setCreateOpen = useUiStore((s) => s.setCreateOpen)
+  const location = useLocation()
+  const onReels = appRoute(location.pathname).startsWith('/reels')
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-ink pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav
+      className={cx(
+        'fixed inset-x-0 bottom-0 z-40 pb-[env(safe-area-inset-bottom)] lg:hidden',
+        onReels ? 'border-t border-white/10 bg-black/40 backdrop-blur-md' : 'border-t border-white/10 bg-ink',
+      )}
+    >
       <div className="mx-auto flex h-12 max-w-lg items-center justify-around">
         {items.map((item) => {
           if (item.to === '__create') {

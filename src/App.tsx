@@ -46,6 +46,7 @@ import { getToken } from './lib/api'
 import { isStandalone } from './lib/pwaInstall'
 import { pullSnapshot } from './services/syncService'
 import { useAuthStore } from './store/authStore'
+import { useLiveSync } from './hooks/useLiveSync'
 
 function GuestRoute({ children }: { children: ReactNode }) {
   const user = useAuthStore((s) => s.user)
@@ -91,6 +92,7 @@ function MarketingPage({ children }: { children: ReactNode }) {
 
 export default function App() {
   const refresh = useAuthStore((s) => s.refresh)
+  useLiveSync()
 
   useEffect(() => {
     refresh()

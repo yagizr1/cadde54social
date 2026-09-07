@@ -37,7 +37,8 @@ export function AppLayout() {
     path.startsWith('/messages') ||
     path.startsWith('/friends') ||
     path === '/settings/archive'
-  const hideNav = path.startsWith('/reels') || path.startsWith('/create') || inChat
+  const onReels = path.startsWith('/reels')
+  const hideNav = path.startsWith('/create') || inChat
   const atSettings = path === '/settings' || path.startsWith('/settings/')
 
   return (
@@ -72,8 +73,8 @@ export function AppLayout() {
               </div>
             </header>
           ) : null}
-          <PullToRefresh onRefresh={refresh} disabled={hideNav || atSettings}>
-            <main className={hideNav ? '' : 'safe-b lg:pb-8'}>
+          <PullToRefresh onRefresh={refresh} disabled={hideNav || onReels || atSettings}>
+            <main className={hideNav || onReels ? '' : 'safe-b lg:pb-8'}>
               <Outlet />
             </main>
           </PullToRefresh>

@@ -6,6 +6,7 @@ import { settingsService } from './settingsService'
 import { getItem, setItem } from './storage'
 import { sync } from './syncService'
 import { userService } from './userService'
+import { useLiveStore } from '../store/liveStore'
 
 function all(): Conversation[] {
   return getItem<Conversation[]>('conversations', [])
@@ -85,6 +86,7 @@ export const messageService = {
     conv.updatedAt = Date.now()
     delete conv.pendingRequestFor
     setItem('conversations', list)
+    useLiveStore.getState().bump()
     sync('messages.send', {
       id: msg.id,
       conversationId,
@@ -167,6 +169,7 @@ export const messageService = {
         ? reactions.filter((r) => r.userId !== userId)
         : [...reactions.filter((r) => r.userId !== userId), { userId, emoji }]
     setItem('conversations', list)
+    useLiveStore.getState().bump()
     sync('messages.react', { conversationId, messageId, emoji })
   },
 
@@ -176,6 +179,7 @@ export const messageService = {
     if (!conv) return
     conv.lastRead = { ...(conv.lastRead ?? {}), [userId]: Date.now() }
     setItem('conversations', list)
+    useLiveStore.getState().bump()
     sync('messages.read', { conversationId })
   },
 
@@ -211,5 +215,105 @@ export const messageService = {
     msg.openedBy = [...opened, userId]
     setItem('conversations', list)
     sync('messages.openOnce', { conversationId, messageId })
+  },
+
+  ingest(remote: Conversation): boolean {
+    const list = all()
+    const local = list.find((c) => c.id === remote.id)
+    if (!local) {
+      setItem('conversations', [remote, ...list])
+      return true
+    }
+    const byId = new Map(local.messages.map((m) => [m.id, m]))
+    let changed = local.messages.length !== remote.messages.length
+    for (const m of remote.messages) {
+      const prev = byId.get(m.id)
+      if (!prev) {
+        byId.set(m.id, m)
+        changed = true
+        continue
+      }
+      const nextReactions = JSON.stringify(m.reactions ?? [])
+      const prevReactions = JSON.stringify(prev.reactions ?? [])
+      if (
+        nextReactions !== prevReactions ||
+        JSON.stringify(m.openedBy ?? []) !== JSON.stringify(prev.openedBy ?? [])
+      ) {
+        byId.set(m.id, { ...prev, ...m })
+        changed = true
+      }
+    }
+    const lastRead = { ...(local.lastRead ?? {}), ...(remote.lastRead ?? {}) }
+    if (JSON.stringify(lastRead) !== JSON.stringify(local.lastRead ?? {})) changed = true
+    if (!changed && local.updatedAt >= remote.updatedAt) return false
+    local.messages = [...byId.values()].sort((a, b) => a.createdAt - b.createdAt)
+    local.lastRead = lastRead
+    local.updatedAt = Math.max(local.updatedAt, remote.updatedAt)
+    local.participantIds = remote.participantIds.length ? remote.participantIds : local.participantIds
+    setItem('conversations', list)
+    return true
+  },
+
+  ingestMany(remotes: Conversation[]): boolean {
+    let changed = false
+    for (const row of remotes) {
+      if (this.ingest(row)) changed = true
+    }
+    return changed
+  },
+
+  applyMessage(
+    conversationId: string,
+    participantIds: string[],
+    message: ChatMessage,
+  ): boolean {
+    const list = all()
+    let conv = list.find((c) => c.id === conversationId)
+    if (!conv) {
+      conv = {
+        id: conversationId,
+        participantIds,
+        messages: [message],
+        updatedAt: message.createdAt,
+      }
+      setItem('conversations', [conv, ...list])
+      return true
+    }
+    if (conv.messages.some((m) => m.id === message.id)) return false
+    conv.messages = [...conv.messages, message]
+    conv.updatedAt = Math.max(conv.updatedAt, message.createdAt)
+    if (participantIds.length) conv.participantIds = participantIds
+    setItem('conversations', list)
+    return true
+  },
+
+  applyRead(conversationId: string, userId: string, at: number): boolean {
+    const list = all()
+    const conv = list.find((c) => c.id === conversationId)
+    if (!conv) return false
+    if ((conv.lastRead?.[userId] ?? 0) >= at) return false
+    conv.lastRead = { ...(conv.lastRead ?? {}), [userId]: at }
+    conv.updatedAt = Math.max(conv.updatedAt, at)
+    setItem('conversations', list)
+    return true
+  },
+
+  applyReact(conversationId: string, messageId: string, reactions: ChatMessage['reactions']): boolean {
+    const list = all()
+    const conv = list.find((c) => c.id === conversationId)
+    const msg = conv?.messages.find((m) => m.id === messageId)
+    if (!conv || !msg) return false
+    msg.reactions = reactions ?? []
+    conv.updatedAt = Date.now()
+    setItem('conversations', list)
+    return true
+  },
+
+  maxUpdatedAt(): number {
+    return all().reduce((max, c) => Math.max(max, c.updatedAt || 0), 0)
+  },
+
+  setTyping(conversationId: string, typing: boolean): void {
+    void sync('messages.typing', { conversationId, typing })
   },
 }

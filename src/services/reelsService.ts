@@ -170,4 +170,12 @@ export const reelsService = {
     sync('reels.approveComment', { reelId, commentId })
     return reel
   },
+
+  remove(id: string, actorId: string): boolean {
+    const reel = all().find((r) => r.id === id)
+    if (!reel || reel.userId !== actorId) return false
+    save(all().filter((r) => r.id !== id))
+    sync('reels.remove', { reelId: id })
+    return true
+  },
 }

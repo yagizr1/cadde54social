@@ -19,6 +19,7 @@ import { messageService } from '../services/messageService'
 import { settingsService } from '../services/settingsService'
 import { userService } from '../services/userService'
 import type { SharePayload } from '../services/shareService'
+import { useLiveStore } from '../store/liveStore'
 import { useUiStore } from '../store/uiStore'
 import type { ChatMessage, ChatReplyTo } from '../types'
 
@@ -64,6 +65,11 @@ export function ConversationPage() {
   const { id = '' } = useParams()
   const { user, refresh } = useApp()
   const toast = useUiStore((s) => s.toast)
+  const bumpLive = useLiveStore((s) => s.bump)
+  const theyTyping = useLiveStore((s) => {
+    const row = s.typing[id]
+    return Boolean(row && row.until > Date.now())
+  })
   const navigate = useNavigate()
   const [text, setText] = useState('')
   const [emojiOpen, setEmojiOpen] = useState(false)
@@ -79,6 +85,9 @@ export function ConversationPage() {
   const listRef = useRef<HTMLDivElement>(null)
   const prevLen = useRef(0)
   const prevId = useRef(id)
+  const typingOn = useRef(false)
+  const typingHold = useRef(0)
+  const typingPulse = useRef(0)
   const conv = messageService.get(id)
 
   const swipe = useChatSwipe((mid) => {
@@ -115,7 +124,7 @@ export function ConversationPage() {
     }
     prevId.current = id
     prevLen.current = len
-  }, [conv?.messages.length, id])
+  }, [conv?.messages.length, id, theyTyping])
 
   useEffect(() => {
     if (!user || !conv) return
@@ -123,6 +132,14 @@ export function ConversationPage() {
     if (other && settingsService.isBlocked(user.id, other)) return
     messageService.markRead(conv.id, user.id)
   }, [user?.id, conv?.id, conv?.messages.length])
+
+  useEffect(() => {
+    return () => {
+      window.clearTimeout(typingHold.current)
+      window.clearTimeout(typingPulse.current)
+      if (typingOn.current && id) messageService.setTyping(id, false)
+    }
+  }, [id])
 
   if (!user || !conv) {
     return <div className="p-6 text-center text-mute">Sohbet bulunamadı.</div>
@@ -145,7 +162,33 @@ export function ConversationPage() {
   )
   const messages = conv.messages
   const active = messages.find((m) => m.id === activeId)
-  const typing = text.trim().length > 0
+  const composing = text.trim().length > 0
+  const peerTyping = Boolean(theyTyping && otherId && !blocked)
+
+  function pulseTyping(on: boolean) {
+    if (blocked) return
+    window.clearTimeout(typingHold.current)
+    window.clearTimeout(typingPulse.current)
+    if (!on) {
+      if (typingOn.current) {
+        typingOn.current = false
+        messageService.setTyping(conversation.id, false)
+      }
+      return
+    }
+    if (!typingOn.current) {
+      typingOn.current = true
+      messageService.setTyping(conversation.id, true)
+    } else {
+      typingPulse.current = window.setTimeout(() => {
+        messageService.setTyping(conversation.id, true)
+      }, 400)
+    }
+    typingHold.current = window.setTimeout(() => {
+      typingOn.current = false
+      messageService.setTyping(conversation.id, false)
+    }, 1400)
+  }
 
   async function send(next = text, image?: string, viewOnce?: boolean) {
     if (blocked) {
@@ -154,6 +197,7 @@ export function ConversationPage() {
     }
     const body = next.trim()
     if (!body && !image) return
+    pulseTyping(false)
     messageService.send(
       conversation.id,
       meId,
@@ -167,7 +211,7 @@ export function ConversationPage() {
     setText('')
     setEmojiOpen(false)
     setReplyTo(null)
-    refresh()
+    bumpLive()
   }
 
   async function onPick(file?: File) {
@@ -201,7 +245,11 @@ export function ConversationPage() {
             <Avatar src={profileUser.avatar} name={profileUser.name} size={32} />
             <span className="min-w-0">
               <p className="truncate text-[16px] font-semibold leading-tight">{profileUser.username}</p>
-              {here ? <p className="truncate text-[12px] leading-tight text-[#a8a8a8]">Cadde 54’te</p> : null}
+              {peerTyping ? (
+                <p className="truncate text-[12px] leading-tight text-hot">yazıyor...</p>
+              ) : here ? (
+                <p className="truncate text-[12px] leading-tight text-[#a8a8a8]">Cadde 54’te</p>
+              ) : null}
             </span>
           </Link>
         ) : (
@@ -306,7 +354,7 @@ export function ConversationPage() {
                           ? undefined
                           : () => {
                               messageService.react(conv.id, m.id, user.id, '❤️')
-                              refresh()
+                              bumpLive()
                             }
                       }
                       meId={user.id}
@@ -317,7 +365,7 @@ export function ConversationPage() {
                                 if (!messageService.canOpenOnce(m, user.id)) return
                                 if (m.senderId !== user.id) {
                                   messageService.openOnce(conv.id, m.id, user.id)
-                                  refresh()
+                                  bumpLive()
                                 }
                                 setOnceMsg(m)
                                 return
@@ -349,6 +397,16 @@ export function ConversationPage() {
               </div>
             )
           })}
+          {peerTyping ? (
+            <div className="relative mt-2 flex items-end gap-1.5">
+              {other?.avatar ? <Avatar src={other.avatar} name={other.name} size={28} peek={false} /> : <span className="w-7 shrink-0" />}
+              <div className="flex h-[34px] items-center gap-1 rounded-[18px] bg-[#262626] px-3.5">
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+                <span className="typing-dot" />
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
@@ -400,11 +458,14 @@ export function ConversationPage() {
               <div className="flex h-11 min-w-0 flex-1 items-center rounded-full border border-white/15 bg-transparent pl-4 pr-1">
                 <input
                   value={text}
-                  onChange={(e) => setText(e.target.value)}
+                  onChange={(e) => {
+                    setText(e.target.value)
+                    pulseTyping(e.target.value.trim().length > 0)
+                  }}
                   placeholder="Mesaj..."
                   className="h-full min-w-0 flex-1 bg-transparent text-[15px] outline-none placeholder:text-[#a8a8a8]"
                 />
-                {typing ? (
+                {composing ? (
                   <button type="submit" className="px-3 text-[15px] font-semibold text-[#3797f0]">
                     Gönder
                   </button>

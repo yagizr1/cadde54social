@@ -22,6 +22,7 @@ import { cx } from '../../lib/utils'
 import { messageService } from '../../services/messageService'
 import { notificationService } from '../../services/notificationService'
 import { useAuthStore } from '../../store/authStore'
+import { useLiveStore } from '../../store/liveStore'
 import { useUiStore } from '../../store/uiStore'
 import { Avatar } from '../ui/Avatar'
 import { CountBadge } from '../ui/CountBadge'
@@ -48,9 +49,11 @@ const links = [
 
 export function Sidebar() {
   const user = useAuthStore((s) => s.user)
+  const liveSeq = useLiveStore((s) => s.seq)
   const setCreateOpen = useUiStore((s) => s.setCreateOpen)
   const setAccountSwitcher = useUiStore((s) => s.setAccountSwitcher)
   if (!user) return null
+  void liveSeq
   const unread = notificationService.unreadCount(user.id)
   const msgUnread = messageService.unreadCount(user.id)
 
