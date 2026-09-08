@@ -1,8 +1,9 @@
 import { uid } from '../lib/utils'
-import type { Post, Repost } from '../types'
+import type { Post, Reel, Repost } from '../types'
 import { challengeService } from './challengeService'
 import { notificationService } from './notificationService'
 import { postService } from './postService'
+import { reelsService } from './reelsService'
 import { getItem, setItem } from './storage'
 import { sync } from './syncService'
 import { userService } from './userService'
@@ -37,10 +38,21 @@ function shuffle<T>(list: T[], seed: number): T[] {
 
 export type FeedEntry = {
   key: string
-  post: Post
   createdAt: number
   repostedById?: string
   suggested?: boolean
+} & ({ kind: 'post'; post: Post } | { kind: 'reel'; reel: Reel })
+
+function ownerId(item: FeedEntry): string {
+  return item.kind === 'post' ? item.post.userId : item.reel.userId
+}
+
+function boostTarget(item: FeedEntry) {
+  return item.kind === 'post' ? item.post : item.reel
+}
+
+function contentKey(item: FeedEntry): string {
+  return item.kind === 'post' ? `p:${item.post.id}` : `r:${item.reel.id}`
 }
 
 export const repostService = {
@@ -85,17 +97,33 @@ export const repostService = {
 
   feed(): FeedEntry[] {
     const posts = postService.list().filter((p) => !p.archived)
-    const byId = new Map(posts.map((p) => [p.id, p]))
-    const entries: FeedEntry[] = posts.map((post) => ({
-      key: post.id,
-      post,
-      createdAt: post.createdAt,
-    }))
+    const reels = reelsService.list()
+    const byPost = new Map(posts.map((p) => [p.id, p]))
+    const byReel = new Map(reels.map((r) => [r.id, r]))
+    const entries: FeedEntry[] = [
+      ...posts.map((post) => ({
+        key: `post:${post.id}`,
+        kind: 'post' as const,
+        post,
+        createdAt: post.createdAt,
+      })),
+      ...reels.map((reel) => ({
+        key: `reel:${reel.id}`,
+        kind: 'reel' as const,
+        reel,
+        createdAt: reel.createdAt,
+      })),
+    ]
     for (const r of this.list()) {
-      if (r.kind !== 'post') continue
-      const post = byId.get(r.targetId)
-      if (!post || post.userId === r.userId) continue
-      entries.push({ key: r.id, post, createdAt: r.createdAt, repostedById: r.userId })
+      if (r.kind === 'post') {
+        const post = byPost.get(r.targetId)
+        if (!post || post.userId === r.userId) continue
+        entries.push({ key: r.id, kind: 'post', post, createdAt: r.createdAt, repostedById: r.userId })
+        continue
+      }
+      const reel = byReel.get(r.targetId)
+      if (!reel || reel.userId === r.userId) continue
+      entries.push({ key: r.id, kind: 'reel', reel, createdAt: r.createdAt, repostedById: r.userId })
     }
     return entries.sort((a, b) => b.createdAt - a.createdAt)
   },
@@ -103,14 +131,14 @@ export const repostService = {
   homeFeed(viewerId: string, followingIds: string[], seed = 0): FeedEntry[] {
     const follow = new Set([viewerId, ...followingIds])
     const fromFollow = (item: FeedEntry) =>
-      follow.has(item.post.userId) || Boolean(item.repostedById && follow.has(item.repostedById))
+      follow.has(ownerId(item)) || Boolean(item.repostedById && follow.has(item.repostedById))
 
     const items = this.feed()
     const following = items.filter(fromFollow)
-    const seenPosts = new Set(following.map((item) => item.post.id))
+    const seenContent = new Set(following.map(contentKey))
     const boostScore = (item: FeedEntry) =>
-      isBoosted(item.post) ? 2 : premiumService.isActive(userService.getById(item.post.userId)) ? 1 : 0
-    const boostOnly = (item: FeedEntry) => (isBoosted(item.post) ? 1 : 0)
+      isBoosted(boostTarget(item)) ? 2 : premiumService.isActive(userService.getById(ownerId(item))) ? 1 : 0
+    const boostOnly = (item: FeedEntry) => (isBoosted(boostTarget(item)) ? 1 : 0)
     const byBoost = (a: FeedEntry, b: FeedEntry) => {
       const d = boostScore(b) - boostScore(a)
       return d !== 0 ? d : b.createdAt - a.createdAt
@@ -120,7 +148,7 @@ export const repostService = {
       return d !== 0 ? d : b.createdAt - a.createdAt
     }
     const suggested = items
-      .filter((item) => !fromFollow(item) && !seenPosts.has(item.post.id))
+      .filter((item) => !fromFollow(item) && !seenContent.has(contentKey(item)))
       .map((item) => ({ ...item, suggested: true as const }))
       .sort(byBoost)
 

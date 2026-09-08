@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from '../lib/nav'
 import { FeedPost } from '../components/feed/FeedPost'
+import { FeedReel } from '../components/feed/FeedReel'
 import { StoryRail } from '../components/feed/StoryRail'
 import { PremiumBanner } from '../components/premium/PremiumBanner'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -24,15 +25,18 @@ export function HomePage() {
   const { user, tick } = useApp()
   const [, setBump] = useState(0)
   const feed = user
-    ? repostService.homeFeed(user.id, user.following, tick).filter(
-        (item) =>
-          postService.isVisible(item.post, user.id) &&
-          !settingsService.isMuted(user.id, item.post.userId) &&
-          !settingsService.iBlocked(item.post.userId, user.id) &&
-          (!item.repostedById ||
-            (!settingsService.isMuted(user.id, item.repostedById) &&
-              !settingsService.iBlocked(item.repostedById, user.id))),
-      )
+    ? repostService.homeFeed(user.id, user.following, tick).filter((item) => {
+        const ownerId = item.kind === 'post' ? item.post.userId : item.reel.userId
+        if (item.kind === 'post' && !postService.isVisible(item.post, user.id)) return false
+        if (settingsService.isMuted(user.id, ownerId) || settingsService.iBlocked(ownerId, user.id)) return false
+        if (
+          item.repostedById &&
+          (settingsService.isMuted(user.id, item.repostedById) || settingsService.iBlocked(item.repostedById, user.id))
+        ) {
+          return false
+        }
+        return true
+      })
     : []
   const firstSuggested = feed.findIndex((item) => item.suggested)
 
@@ -71,13 +75,23 @@ export function HomePage() {
                 <p className="text-[12px] text-mute">Takip ettiklerini gördün. Keşfetmeye devam et.</p>
               </div>
             ) : null}
-            <FeedPost
-              post={item.post}
-              meId={user.id}
-              onChange={onChange}
-              repostedById={item.repostedById}
-              suggested={item.suggested}
-            />
+            {item.kind === 'reel' ? (
+              <FeedReel
+                reel={item.reel}
+                meId={user.id}
+                onChange={onChange}
+                repostedById={item.repostedById}
+                suggested={item.suggested}
+              />
+            ) : (
+              <FeedPost
+                post={item.post}
+                meId={user.id}
+                onChange={onChange}
+                repostedById={item.repostedById}
+                suggested={item.suggested}
+              />
+            )}
           </div>
         ))
       )}
